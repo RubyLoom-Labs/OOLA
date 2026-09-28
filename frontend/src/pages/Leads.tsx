@@ -9,8 +9,6 @@ import {
   Search,
   MoreVertical,
   Clock,
-  DollarSign,
-  User,
 } from 'lucide-react'
 
 type ViewMode = 'kanban' | 'list'

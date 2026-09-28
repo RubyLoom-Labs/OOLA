@@ -4,8 +4,6 @@ import {
   LayoutDashboard,
   Users,
   UserCircle,
-  Building2,
-  Handshake,
   FolderKanban,
   CheckSquare,
   Calendar,
@@ -14,7 +12,6 @@ import {
   FileSpreadsheet,
   Package,
   BarChart3,
-  Zap,
   Settings,
   ChevronRight,
   ChevronLeft,
@@ -37,16 +34,14 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Leads', icon: Users, path: '/leads' },
-  { label: 'Contacts', icon: UserCircle, path: '/contacts' },
-  { label: 'Accounts', icon: Building2, path: '/accounts' },
-  { label: 'Deals', icon: Handshake, path: '/deals' },
-  { label: 'Projects', icon: FolderKanban, path: '/projects' },
+  { label: 'Projects / Deals', icon: FolderKanban, path: '/projects' },
+  { label: 'Customers / Contacts', icon: UserCircle, path: '/contacts' },
   { label: 'Tasks', icon: CheckSquare, path: '/tasks' },
   { label: 'Calendar', icon: Calendar, path: '/calendar' },
-  { label: 'Emails', icon: Mail, path: '/emails' },
-  { label: 'Invoices', icon: FileText, path: '/invoices' },
+  { label: 'Communication Hub', icon: Mail, path: '/emails' },
+  { label: 'Payments', icon: FileText, path: '/invoices' },
   {
-    label: 'Quotes',
+    label: 'Quotation Generator',
     icon: FileSpreadsheet,
     path: '/quotes',
     children: [
@@ -57,9 +52,9 @@ const navItems: NavItem[] = [
       { label: 'Rejected', path: '/quotes/rejected' },
     ],
   },
-  { label: 'Products', icon: Package, path: '/products' },
+  { label: 'Hosting Information', icon: Package, path: '/products' },
+  { label: 'Employees', icon: Users, path: '/accounts' },
   { label: 'Reports', icon: BarChart3, path: '/reports' },
-  { label: 'Automations', icon: Zap, path: '/automations' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ]
 
@@ -145,21 +140,23 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Footer */}
       <div className="sidebar-footer">
         {!collapsed && (
-          <div className="sidebar-upgrade-card">
-            <div className="sidebar-upgrade-title">
-              <Crown size={14} />
-              Upgrade your plan
+          <div className="sidebar-plan-card">
+            <div className="sidebar-plan-header">
+              <div className="sidebar-plan-icon">
+                <Crown size={15} />
+              </div>
+              <div className="sidebar-plan-info">
+                <span className="sidebar-plan-label">Your Plan</span>
+                <span className="sidebar-plan-name">Professional</span>
+              </div>
             </div>
-            <p className="sidebar-upgrade-text">
-              Unlock advanced features and grow your business faster.
-            </p>
-            <button className="sidebar-upgrade-btn">Upgrade Now</button>
+            <button className="sidebar-plan-btn">Upgrade</button>
           </div>
         )}
         <button
           className="sidebar-collapse-btn"
           onClick={onToggle}
-          style={{ marginTop: collapsed ? 0 : 10 }}
+          style={{ marginTop: collapsed ? 0 : 8 }}
         >
           <ChevronLeft size={18} style={{ transform: collapsed ? 'rotate(180deg)' : 'none' }} />
           {!collapsed && <span>Collapse</span>}

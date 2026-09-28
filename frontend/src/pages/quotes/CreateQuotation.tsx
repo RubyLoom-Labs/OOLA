@@ -21,7 +21,6 @@ import {
   Calendar,
   Building2,
   FolderKanban,
-  UserCircle,
   Tag,
 } from 'lucide-react'
 

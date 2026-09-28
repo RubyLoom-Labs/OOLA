@@ -2,11 +2,8 @@ import { useState } from 'react'
 import {
   Menu,
   Search,
-  Plus,
-  Phone,
   Mail,
   Bell,
-  HelpCircle,
   ChevronDown,
 } from 'lucide-react'
 
@@ -55,8 +52,6 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
     },
   ]
 
-  const unreadCount = notifications.filter((n) => n.unread).length
-
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -79,25 +74,14 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
       </div>
 
       <div className="topbar-right">
-        <button className="topbar-icon-btn topbar-icon-btn-primary">
-          <Plus className="icon" />
-        </button>
-
-        <button className="topbar-icon-btn">
-          <Phone className="icon" />
-        </button>
-
-        <button className="topbar-icon-btn">
-          <Mail className="icon" />
-        </button>
-
         <div style={{ position: 'relative' }}>
           <button
             className="topbar-icon-btn"
             onClick={() => setShowNotifications(!showNotifications)}
+            title="Notifications"
           >
-            <Bell className="icon" />
-            {unreadCount > 0 && <span className="topbar-badge">{unreadCount}</span>}
+            <Bell size={18} />
+            <span className="topbar-badge">3</span>
           </button>
 
           {showNotifications && (
@@ -127,21 +111,23 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
           )}
         </div>
 
-        <button className="topbar-icon-btn">
-          <HelpCircle className="icon" />
+        <button className="topbar-icon-btn" title="Messages">
+          <Mail size={18} />
         </button>
 
         <div className="topbar-divider" />
 
         <div className="topbar-user">
-          <div className="topbar-user-avatar">
-            <span>JD</span>
-          </div>
+          <img
+            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"
+            alt="John Doe"
+            className="topbar-user-avatar-img"
+          />
           <div className="topbar-user-info">
             <div className="topbar-user-name">John Doe</div>
             <div className="topbar-user-role">Admin</div>
           </div>
-          <ChevronDown className="topbar-user-chevron" />
+          <ChevronDown className="topbar-user-chevron" size={14} />
         </div>
       </div>
     </header>

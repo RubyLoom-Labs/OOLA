@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
 import Dashboard from '@/pages/Dashboard'
 import Leads from '@/pages/Leads'
+import Contacts from '@/pages/Contacts'
 import CreateQuotation from '@/pages/quotes/CreateQuotation'
 import PlaceholderPage from '@/pages/PlaceholderPage'
 
@@ -12,16 +13,7 @@ function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/leads" element={<Leads />} />
-          <Route
-            path="/contacts"
-            element={
-              <PlaceholderPage
-                title="Contacts"
-                description="Manage your customer contacts and relationships."
-                breadcrumb={[{ label: 'Contacts' }]}
-              />
-            }
-          />
+          <Route path="/contacts" element={<Contacts />} />
           <Route
             path="/accounts"
             element={
