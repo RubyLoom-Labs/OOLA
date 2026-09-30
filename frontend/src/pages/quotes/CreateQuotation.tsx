@@ -152,9 +152,9 @@ export default function CreateQuotation() {
                   <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-gray-500)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                     To (Customer)
                   </div>
-                  <button className="btn btn-outline btn-sm">
-                    <Edit3 size={13} />
-                    Edit
+                  <button type="button" className="card-section-edit-btn">
+                    <Edit3 size={12} className="edit-btn-icon" />
+                    <span>Edit</span>
                   </button>
                 </div>
                 <div>
