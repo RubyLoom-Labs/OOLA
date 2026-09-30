@@ -4,6 +4,9 @@ use App\Http\Controllers\Api\V1\ActivityLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CalendarEventController;
 use App\Http\Controllers\Api\V1\CommunicationLogController;
+use App\Http\Controllers\Api\V1\CompanyController;
+use App\Http\Controllers\Api\V1\CompanySizeController;
+use App\Http\Controllers\Api\V1\CompanyTypeController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\ContactPhoneNumberController;
 use App\Http\Controllers\Api\V1\CrmNotificationController;
@@ -69,12 +72,22 @@ Route::prefix('v1')->group(function () {
         Route::post('/roles', [RoleController::class, 'store']);
         Route::get('/permissions', [RoleController::class, 'permissions']);
 
-        // Customers & Contacts & Phone Numbers
+        // Companies, Company Types & Company Sizes
+        Route::get('/company-types', [CompanyTypeController::class, 'index']);
+        Route::apiResource('company-types', CompanyTypeController::class);
+        Route::get('/company-sizes', [CompanySizeController::class, 'index']);
+        Route::apiResource('company-sizes', CompanySizeController::class);
+        Route::get('/companies/next-code', [CompanyController::class, 'nextCode']);
+        Route::get('/companies/lookup', [CompanyController::class, 'lookup']);
+        Route::get('/companies/active-list', [CompanyController::class, 'lookup']);
+        Route::post('/companies/{id}/restore', [CompanyController::class, 'restore']);
+        Route::apiResource('companies', CompanyController::class);
+
+        // Customers (legacy compatibility) & Contacts & Phone Numbers
         Route::post('/customers/{id}/restore', [CustomerController::class, 'restore']);
         Route::apiResource('customers', CustomerController::class);
         Route::post('/contacts/{id}/restore', [ContactController::class, 'restore']);
         Route::get('/contacts/{contact}/projects', [ContactController::class, 'projectsHistory']);
-        Route::post('/contacts/{contact}/owners', [ContactController::class, 'addOwner']);
         Route::apiResource('contacts', ContactController::class);
         Route::apiResource('contact-phone-numbers', ContactPhoneNumberController::class);
 

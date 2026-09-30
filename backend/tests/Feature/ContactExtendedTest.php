@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
 use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\Project;
@@ -25,50 +26,28 @@ class ContactExtendedTest extends TestCase
         $response->assertStatus(401);
 
         $storeResponse = $this->postJson('/api/v1/contacts', [
-            'company_name' => 'Acme Corp',
+            'company' => 'Acme Corp',
         ]);
         $storeResponse->assertStatus(401);
     }
 
-    public function test_can_create_contact_with_all_extended_properties_and_multiple_owners(): void
+    public function test_can_create_contact_with_cleaned_properties_and_multiple_phones(): void
     {
         $admin = User::where('email', 'admin@ooralabz.com')->first();
         $customer = Customer::first();
 
         $payload = [
-            'customer_id' => $customer->id,
-            'company_name' => 'Nexus Global Innovations',
-            'company_type' => 'Private Ltd',
-            'owner_name' => 'Alexander Vance',
-            'owners' => [
-                [
-                    'name' => 'Alexander Vance',
-                    'email' => 'alex@nexusglobal.com',
-                    'phone' => '+94 77 123 4567',
-                    'designation' => 'Managing Director',
-                    'residence' => 'Colombo 07, Western Province',
-                ],
-                [
-                    'name' => 'Elena Rostova',
-                    'email' => 'elena@nexusglobal.com',
-                    'phone' => '+94 77 987 6543',
-                    'designation' => 'Co-Founder & CTO',
-                    'residence' => 'Kandy, Central Province',
-                ],
-            ],
+            'company_id' => $customer->id,
+            'company' => 'Nexus Global Innovations',
+            'first_name' => 'Alexander',
+            'last_name' => 'Vance',
             'designation' => 'Chief Executive Officer',
-            'owner_email' => 'alex@nexusglobal.com',
-            'contact_details' => [
-                'preferred_channel' => 'WhatsApp',
-                'secondary_office' => 'Dubai Internet City',
-            ],
-            'company_address' => '100 Innovation Way, Colombo 03',
+            'email' => 'alex@nexusglobal.com',
+            'phone' => '+94 77 123 4567',
             'website' => 'https://nexusglobal.io',
-            'state' => 'Western Province',
-            'owner_phone' => '+94 77 123 4567',
-            'owner_residence' => 'Colombo 07',
-            'owner_birthday' => '1988-06-15',
-            'notes' => 'Key Enterprise Strategic Account',
+            'address' => '100 Innovation Way, Colombo 03',
+            'birthday' => '1988-06-15',
+            'status' => 'Active',
             'phone_numbers' => [
                 [
                     'phone_number' => '+94 77 123 4567',
@@ -90,49 +69,30 @@ class ContactExtendedTest extends TestCase
         $response = $this->actingAs($admin, 'sanctum')->postJson('/api/v1/contacts', $payload);
 
         $response->assertStatus(201)
+            ->assertJsonPath('data.company_id', $customer->id)
             ->assertJsonPath('data.company_name', 'Nexus Global Innovations')
-            ->assertJsonPath('data.company_type', 'Private Ltd')
-            ->assertJsonPath('data.owner_name', 'Alexander Vance')
+            ->assertJsonPath('data.first_name', 'Alexander')
+            ->assertJsonPath('data.last_name', 'Vance')
+            ->assertJsonPath('data.full_name', 'Alexander Vance')
             ->assertJsonPath('data.designation', 'Chief Executive Officer')
-            ->assertJsonPath('data.owner_email', 'alex@nexusglobal.com')
             ->assertJsonPath('data.email', 'alex@nexusglobal.com')
-            ->assertJsonPath('data.company_address', '100 Innovation Way, Colombo 03')
+            ->assertJsonPath('data.phone', '+94 77 123 4567')
             ->assertJsonPath('data.website', 'https://nexusglobal.io')
-            ->assertJsonPath('data.state', 'Western Province')
-            ->assertJsonPath('data.owner_phone', '+94 77 123 4567')
-            ->assertJsonPath('data.owner_residence', 'Colombo 07')
-            ->assertJsonPath('data.owner_birthday', '1988-06-15')
-            ->assertJsonCount(2, 'data.owners')
+            ->assertJsonPath('data.address', '100 Innovation Way, Colombo 03')
+            ->assertJsonPath('data.birthday', '1988-06-15')
+            ->assertJsonPath('data.status', 'Active')
             ->assertJsonCount(2, 'data.phone_numbers');
 
         $contactId = $response->json('data.id');
         $this->assertDatabaseHas('contacts', [
             'id' => $contactId,
-            'company_name' => 'Nexus Global Innovations',
-            'state' => 'Western Province',
+            'company_id' => $customer->id,
+            'company' => 'Nexus Global Innovations',
+            'first_name' => 'Alexander',
+            'last_name' => 'Vance',
+            'email' => 'alex@nexusglobal.com',
+            'status' => 'Active',
         ]);
-    }
-
-    public function test_can_add_owner_to_existing_contact(): void
-    {
-        $admin = User::where('email', 'admin@ooralabz.com')->first();
-        $contact = Contact::first();
-
-        $response = $this->actingAs($admin, 'sanctum')->postJson("/api/v1/contacts/{$contact->id}/owners", [
-            'owner' => [
-                'name' => 'Marcus Aurelius',
-                'email' => 'marcus@example.com',
-                'phone' => '+94 77 555 1234',
-                'designation' => 'Executive Director',
-                'residence' => 'Rome / Colombo',
-            ],
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJsonPath('message', 'Owner added successfully.');
-
-        $freshContact = $contact->fresh();
-        $this->assertNotEmpty($freshContact->owners);
     }
 
     public function test_projects_history_and_count_endpoint(): void
@@ -149,8 +109,8 @@ class ContactExtendedTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'contact_id',
-                'company_name',
-                'owner_name',
+                'company',
+                'full_name',
                 'projects_count',
                 'projects' => [
                     '*' => [
@@ -161,6 +121,56 @@ class ContactExtendedTest extends TestCase
                         'stage',
                         'budget',
                         'quoted_amount',
+                    ],
+                ],
+            ]);
+    }
+
+    public function test_show_contact_endpoint_returns_contact_company_and_project_details(): void
+    {
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $contact = Contact::first();
+        $project = Project::first();
+
+        // Attach project to contact
+        $project->update(['contact_id' => $contact->id]);
+
+        $response = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/contacts/{$contact->id}");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.id', $contact->id)
+            ->assertJsonPath('data.company_name', 'Apex Global Logistics')
+            ->assertJsonPath('data.first_name', 'Sarah')
+            ->assertJsonPath('data.last_name', 'Connor')
+            ->assertJsonPath('data.email', 'sarah.c@apexlogistics.com')
+            ->assertJsonStructure([
+                'data' => [
+                    'id',
+                    'company_id',
+                    'company_name',
+                    'first_name',
+                    'last_name',
+                    'full_name',
+                    'email',
+                    'phone',
+                    'designation',
+                    'status',
+                    'phone_numbers',
+                    'company' => [
+                        'id',
+                        'company_code',
+                        'company_name',
+                        'email',
+                    ],
+                    'projects' => [
+                        '*' => [
+                            'id',
+                            'project_code',
+                            'project_title',
+                            'status',
+                            'stage',
+                            'budget',
+                        ],
                     ],
                 ],
             ]);
@@ -188,9 +198,10 @@ class ContactExtendedTest extends TestCase
     {
         $admin = User::where('email', 'admin@ooralabz.com')->first();
         $contact = Contact::create([
-            'company_name' => 'Deletable Contact Corp',
-            'owner_name' => 'Temporary Owner',
-            'email' => 'temp.owner@deletable.com',
+            'company' => 'Deletable Contact Corp',
+            'first_name' => 'Temporary',
+            'last_name' => 'Contact',
+            'email' => 'temp.contact@deletable.com',
         ]);
 
         $contactId = $contact->id;

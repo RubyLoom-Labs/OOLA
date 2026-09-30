@@ -20,40 +20,33 @@ class ContactController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Contact::with(['phoneNumbers', 'primaryPhoneNumber', 'customer'])
-            ->withCount('projects');
+        $query = Contact::with(['phoneNumbers', 'primaryPhoneNumber', 'company:id,company_name']);
 
-        // Safe filtering by customer_id
-        if ($request->filled('customer_id')) {
-            $query->where('customer_id', (int) $request->input('customer_id'));
+        // Safe filtering by company_id / customer_id
+        if ($request->filled('company_id')) {
+            $query->where('company_id', (int) $request->input('company_id'));
+        } elseif ($request->filled('customer_id')) {
+            $query->where('company_id', (int) $request->input('customer_id'));
         }
 
-        // Safe filtering by company type
-        if ($request->filled('company_type')) {
-            $query->where('company_type', $request->input('company_type'));
-        }
-
-        // Safe filtering by state
-        if ($request->filled('state')) {
-            $query->where('state', $request->input('state'));
+        // Safe filtering by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
         }
 
         // Safe parameterized search against SQL injection
         if ($request->filled('search')) {
             $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
-                $q->where('company_name', 'like', "%{$search}%")
-                  ->orWhere('company_type', 'like', "%{$search}%")
-                  ->orWhere('owner_name', 'like', "%{$search}%")
+                $q->where('company', 'like', "%{$search}%")
                   ->orWhere('first_name', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('designation', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('owner_email', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('owner_phone', 'like', "%{$search}%")
-                  ->orWhere('state', 'like', "%{$search}%")
                   ->orWhere('website', 'like', "%{$search}%")
+                  ->orWhere('address', 'like', "%{$search}%")
+                  ->orWhere('status', 'like', "%{$search}%")
                   ->orWhereHas('phoneNumbers', function ($pq) use ($search) {
                       $pq->where('phone_number', 'like', "%{$search}%");
                   });
@@ -63,14 +56,15 @@ class ContactController extends Controller
         // Whitelisted sorting columns to prevent SQL injection
         $allowedSortColumns = [
             'id',
-            'company_name',
-            'company_type',
-            'owner_name',
+            'company',
             'first_name',
             'last_name',
             'designation',
             'email',
-            'state',
+            'phone',
+            'website',
+            'birthday',
+            'status',
             'created_at',
             'updated_at',
         ];
@@ -117,7 +111,7 @@ class ContactController extends Controller
                 $this->syncPhoneNumbers($contact, $phoneNumbers);
             } elseif (!empty($contact->phone)) {
                 ContactPhoneNumber::create([
-                    'customer_id' => $contact->customer_id,
+                    'customer_id' => $contact->company_id,
                     'contact_id' => $contact->id,
                     'phone_number' => $contact->phone,
                     'type' => 'Mobile',
@@ -128,18 +122,26 @@ class ContactController extends Controller
 
             ActivityLogger::log('Contact Created', "Created contact: {$contact->full_name}", $contact);
 
-            return (new ContactResource($contact->load(['phoneNumbers', 'primaryPhoneNumber', 'customer'])))
+            return (new ContactResource($contact->load(['phoneNumbers', 'primaryPhoneNumber', 'company:id,company_name'])))
                 ->response()
                 ->setStatusCode(201);
         });
     }
 
     /**
-     * Display the specified contact.
+     * Display the specified contact with company details and projects history.
      */
     public function show(Contact $contact): ContactResource
     {
-        return new ContactResource($contact->load(['phoneNumbers', 'primaryPhoneNumber', 'customer', 'directProjects.stage']));
+        return new ContactResource(
+            $contact->load([
+                'phoneNumbers',
+                'primaryPhoneNumber',
+                'company.companyType',
+                'company.companySize',
+                'directProjects.stage',
+            ])
+        );
     }
 
     /**
@@ -165,7 +167,7 @@ class ContactController extends Controller
 
             ActivityLogger::log('Contact Updated', "Updated contact: {$contact->full_name}", $contact);
 
-            return new ContactResource($contact->load(['phoneNumbers', 'primaryPhoneNumber', 'customer']));
+            return new ContactResource($contact->load(['phoneNumbers', 'primaryPhoneNumber', 'company:id,company_name']));
         });
     }
 
@@ -200,35 +202,11 @@ class ContactController extends Controller
     {
         return response()->json([
             'contact_id' => $contact->id,
-            'company_name' => $contact->company_name,
-            'owner_name' => $contact->owner_name ?? $contact->full_name,
+            'company' => $contact->company,
+            'company_name' => $contact->company,
+            'full_name' => $contact->full_name,
             'projects_count' => $contact->projects_count,
             'projects' => $contact->projects_history,
-        ]);
-    }
-
-    /**
-     * Add an owner to a contact's owners list.
-     */
-    public function addOwner(Request $request, Contact $contact): JsonResponse
-    {
-        $validated = $request->validate([
-            'owner' => ['required'],
-            'owner.name' => ['nullable', 'string', 'max:255'],
-            'owner.email' => ['nullable', 'email', 'max:255'],
-            'owner.phone' => ['nullable', 'string', 'max:50'],
-            'owner.designation' => ['nullable', 'string', 'max:100'],
-            'owner.residence' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $ownerData = $validated['owner'];
-        $contact->addOwner($ownerData);
-
-        ActivityLogger::log('Contact Owner Added', "Added owner to contact: {$contact->full_name}", $contact);
-
-        return response()->json([
-            'message' => 'Owner added successfully.',
-            'data' => new ContactResource($contact->load(['phoneNumbers', 'primaryPhoneNumber'])),
         ]);
     }
 
@@ -275,7 +253,7 @@ class ContactController extends Controller
             }
 
             $record = ContactPhoneNumber::create([
-                'customer_id' => $contact->customer_id,
+                'customer_id' => $contact->company_id,
                 'contact_id' => $contact->id,
                 'phone_number' => $phoneNumber,
                 'type' => $type,
@@ -296,7 +274,6 @@ class ContactController extends Controller
         $primary = ContactPhoneNumber::where('contact_id', $contact->id)->where('is_primary', true)->first();
         if ($primary && $contact->phone !== $primary->phone_number) {
             $contact->phone = $primary->phone_number;
-            $contact->owner_phone = $primary->phone_number;
             $contact->saveQuietly();
         }
     }
@@ -306,60 +283,17 @@ class ContactController extends Controller
      */
     protected function normalizeContactData(array $data): array
     {
-        // Website alias
-        if (isset($data['web']) && !isset($data['website'])) {
-            $data['website'] = $data['web'];
+        // Support company_name -> company
+        if (isset($data['company_name']) && !isset($data['company'])) {
+            $data['company'] = $data['company_name'];
         }
-        unset($data['web']);
+        unset($data['company_name']);
 
-        // Company address alias
-        if (isset($data['address']) && !isset($data['company_address'])) {
-            $data['company_address'] = $data['address'];
+        // Support customer_id -> company_id
+        if (isset($data['customer_id']) && !isset($data['company_id'])) {
+            $data['company_id'] = $data['customer_id'];
         }
-        unset($data['address']);
-
-        // State alias
-        if (isset($data['states']) && !isset($data['state'])) {
-            $data['state'] = $data['states'];
-        }
-        unset($data['states']);
-
-        // Owner residence alias
-        if (isset($data['residence']) && !isset($data['owner_residence'])) {
-            $data['owner_residence'] = $data['residence'];
-        }
-        unset($data['residence']);
-
-        // Owner birthday alias
-        if (isset($data['birthday']) && !isset($data['owner_birthday'])) {
-            $data['owner_birthday'] = $data['birthday'];
-        }
-        unset($data['birthday']);
-
-        // Sync owner_email and email
-        if (isset($data['owner_email']) && !isset($data['email'])) {
-            $data['email'] = $data['owner_email'];
-        } elseif (isset($data['email']) && !isset($data['owner_email'])) {
-            $data['owner_email'] = $data['email'];
-        }
-
-        // Sync owner_phone and phone
-        if (isset($data['owner_phone']) && !isset($data['phone'])) {
-            $data['phone'] = $data['owner_phone'];
-        } elseif (isset($data['phone']) && !isset($data['owner_phone'])) {
-            $data['owner_phone'] = $data['phone'];
-        }
-
-        // Sync owner_name and first_name/last_name
-        if (!empty($data['owner_name']) && empty($data['first_name'])) {
-            $parts = explode(' ', trim($data['owner_name']), 2);
-            $data['first_name'] = $parts[0] ?? $data['owner_name'];
-            if (isset($parts[1]) && empty($data['last_name'])) {
-                $data['last_name'] = $parts[1];
-            }
-        } elseif (empty($data['owner_name']) && !empty($data['first_name'])) {
-            $data['owner_name'] = trim("{$data['first_name']} " . ($data['last_name'] ?? ''));
-        }
+        unset($data['customer_id']);
 
         return $data;
     }

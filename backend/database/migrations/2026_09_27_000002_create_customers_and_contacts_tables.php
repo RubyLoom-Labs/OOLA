@@ -42,14 +42,17 @@ return new class extends Migration
 
         Schema::create('contacts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
-            $table->string('first_name');
+            $table->foreignId('company_id')->nullable()->constrained('customers')->nullOnDelete();
+            $table->string('company')->nullable();
+            $table->string('first_name')->nullable();
             $table->string('last_name')->nullable();
             $table->string('designation')->nullable();
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
-            $table->boolean('is_primary')->default(false);
-            $table->text('notes')->nullable();
+            $table->string('website')->nullable();
+            $table->text('address')->nullable();
+            $table->date('birthday')->nullable();
+            $table->string('status')->default('Active');
 
             // Soft delete & audit
             $table->boolean('is_delete')->default(false)->index();
@@ -59,7 +62,10 @@ return new class extends Migration
             $table->timestamp('deleted_at')->nullable();
             $table->timestamps();
 
-            $table->index(['customer_id', 'is_primary']);
+            $table->index(['company_id']);
+            $table->index('company');
+            $table->index('email');
+            $table->index('status');
         });
     }
 

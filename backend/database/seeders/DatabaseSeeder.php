@@ -5,6 +5,9 @@ namespace Database\Seeders;
 use App\Models\ActivityLog;
 use App\Models\CalendarEvent;
 use App\Models\CommunicationLog;
+use App\Models\Company;
+use App\Models\CompanySize;
+use App\Models\CompanyType;
 use App\Models\Contact;
 use App\Models\CrmNotification;
 use App\Models\Customer;
@@ -205,7 +208,42 @@ class DatabaseSeeder extends Seeder
             $createdTaskStages[$ts['slug']] = TaskStage::firstOrCreate(['slug' => $ts['slug']], $ts);
         }
 
-        // 8. Sample Customer & Contact & Phone Numbers
+        // 8. Company Types & Company Sizes
+        $companyTypes = ['Prospect', 'Customer', 'Partner', 'Vendor', 'Agency', 'Reseller', 'Other'];
+        $createdCompanyTypes = [];
+        foreach ($companyTypes as $typeName) {
+            $createdCompanyTypes[$typeName] = CompanyType::firstOrCreate(['name' => $typeName], ['status' => true]);
+        }
+
+        $companySizes = ['1–10', '11–50', '51–200', '201–500', '501–1000', '1000+'];
+        $createdCompanySizes = [];
+        foreach ($companySizes as $sizeName) {
+            $createdCompanySizes[$sizeName] = CompanySize::firstOrCreate(['name' => $sizeName], ['status' => true]);
+        }
+
+        // 9. Sample Company & Customer & Contact & Phone Numbers
+        $company = Company::firstOrCreate(
+            ['company_name' => 'Apex Global Logistics'],
+            [
+                'company_code' => 'CO000001',
+                'company_type_id' => $createdCompanyTypes['Customer']->id,
+                'company_size_id' => $createdCompanySizes['51–200']->id,
+                'email' => 'contact@apexlogistics.com',
+                'industry' => 'Logistics & Supply Chain',
+                'status' => true,
+                'company_description' => 'Leading enterprise logistics & freight forwarding provider.',
+                'website' => 'https://apexlogistics.com',
+                'owner_name' => 'David Vance',
+                'owner_birthday' => '1982-05-14',
+                'address_line_1' => '45 Colombo Business Tower',
+                'address_line_2' => 'Galle Road',
+                'city' => 'Colombo',
+                'state' => 'Western Province',
+                'postal_code' => '00300',
+                'country' => 'Sri Lanka',
+            ]
+        );
+
         $customer = Customer::firstOrCreate(
             ['company_name' => 'Apex Global Logistics'],
             [
@@ -223,22 +261,23 @@ class DatabaseSeeder extends Seeder
         );
 
         \App\Models\ContactPhoneNumber::firstOrCreate(
-            ['customer_id' => $customer->id, 'phone_number' => '+94 11 234 5678'],
-            ['type' => 'Work', 'is_primary' => true, 'is_whatsapp' => false, 'notes' => 'Head Office Hotline']
+            ['company_id' => $company->id, 'phone_number' => '+94 11 234 5678'],
+            ['customer_id' => $customer->id, 'type' => 'Work', 'is_primary' => true, 'is_whatsapp' => false, 'notes' => 'Head Office Hotline']
         );
         \App\Models\ContactPhoneNumber::firstOrCreate(
-            ['customer_id' => $customer->id, 'phone_number' => '+94 77 111 2233'],
-            ['type' => 'WhatsApp', 'is_primary' => false, 'is_whatsapp' => true, 'notes' => 'Official Customer Support WhatsApp']
+            ['company_id' => $company->id, 'phone_number' => '+94 77 111 2233'],
+            ['customer_id' => $customer->id, 'type' => 'WhatsApp', 'is_primary' => false, 'is_whatsapp' => true, 'notes' => 'Official Customer Support WhatsApp']
         );
 
         $contact = Contact::firstOrCreate(
-            ['customer_id' => $customer->id, 'email' => 'sarah.c@apexlogistics.com'],
+            ['company_id' => $customer->id, 'email' => 'sarah.c@apexlogistics.com'],
             [
+                'company' => $customer->company_name,
                 'first_name' => 'Sarah',
                 'last_name' => 'Connor',
                 'designation' => 'Chief Operations Officer',
                 'phone' => '+94 77 987 6543',
-                'is_primary' => true,
+                'status' => 'Active',
             ]
         );
 

@@ -9,26 +9,17 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Contact extends BaseModel
 {
     protected $fillable = [
-        'customer_id',
-        'company_name',
-        'company_type',
-        'owner_name',
-        'owners',
+        'company_id',
+        'company',
         'first_name',
         'last_name',
         'designation',
         'email',
-        'owner_email',
         'phone',
-        'owner_phone',
-        'owner_residence',
-        'owner_birthday',
-        'company_address',
         'website',
-        'state',
-        'contact_details',
-        'is_primary',
-        'notes',
+        'address',
+        'birthday',
+        'status',
         'is_delete',
         'created_by',
         'updated_by',
@@ -37,28 +28,45 @@ class Contact extends BaseModel
     ];
 
     protected $casts = [
-        'owners' => 'array',
-        'owner_birthday' => 'date',
-        'contact_details' => 'array',
-        'is_primary' => 'boolean',
+        'birthday' => 'date',
         'is_delete' => 'boolean',
     ];
 
-    public function customer(): BelongsTo
+    /**
+     * Get the associated company (Company model).
+     */
+    public function company(): BelongsTo
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Company::class, 'company_id');
     }
 
+    /**
+     * Get the associated customer/company (Customer model).
+     */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'company_id');
+    }
+
+    /**
+     * Multiple phone numbers associated with this contact.
+     */
     public function phoneNumbers(): HasMany
     {
         return $this->hasMany(ContactPhoneNumber::class);
     }
 
+    /**
+     * Primary phone number for this contact.
+     */
     public function primaryPhoneNumber(): HasOne
     {
         return $this->hasOne(ContactPhoneNumber::class)->where('is_primary', true);
     }
 
+    /**
+     * Direct projects assigned to this contact.
+     */
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class, 'contact_id');
@@ -69,11 +77,17 @@ class Contact extends BaseModel
         return $this->hasMany(Project::class, 'contact_id');
     }
 
+    /**
+     * Leads associated with this contact.
+     */
     public function leads(): HasMany
     {
         return $this->hasMany(Lead::class, 'contact_id');
     }
 
+    /**
+     * Full name accessor.
+     */
     public function getFullNameAttribute(): string
     {
         $name = trim("{$this->first_name} {$this->last_name}");
@@ -81,15 +95,37 @@ class Contact extends BaseModel
             return $name;
         }
 
-        if (!empty($this->owner_name)) {
-            return $this->owner_name;
-        }
-
-        return $this->company_name ?? '';
+        return $this->company ?? '';
     }
 
     /**
-     * Get the effective projects count (direct contact projects or through customer).
+     * Backward compatibility / alias for company_name attribute.
+     */
+    public function getCompanyNameAttribute(): ?string
+    {
+        return $this->company;
+    }
+
+    public function setCompanyNameAttribute(?string $value): void
+    {
+        $this->attributes['company'] = $value;
+    }
+
+    /**
+     * Backward compatibility / alias for customer_id attribute.
+     */
+    public function getCustomerIdAttribute(): ?int
+    {
+        return $this->company_id;
+    }
+
+    public function setCustomerIdAttribute(?int $value): void
+    {
+        $this->attributes['company_id'] = $value;
+    }
+
+    /**
+     * Get the effective projects count (direct contact projects or through company/customer).
      */
     public function getProjectsCountAttribute(): int
     {
@@ -102,7 +138,7 @@ class Contact extends BaseModel
             return $directCount;
         }
 
-        if ($this->customer_id && $this->relationLoaded('customer') && $this->customer) {
+        if ($this->company_id && $this->relationLoaded('customer') && $this->customer) {
             return $this->customer->projects()->count();
         }
 
@@ -115,8 +151,8 @@ class Contact extends BaseModel
     public function getProjectsHistoryAttribute(): array
     {
         $projects = $this->projects()->with('stage')->latest()->get();
-        if ($projects->isEmpty() && $this->customer_id) {
-            $projects = Project::where('customer_id', $this->customer_id)->with('stage')->latest()->get();
+        if ($projects->isEmpty() && $this->company_id) {
+            $projects = Project::where('customer_id', $this->company_id)->with('stage')->latest()->get();
         }
 
         return $projects->map(function (Project $project) {
@@ -133,16 +169,5 @@ class Contact extends BaseModel
                 'created_at' => $project->created_at?->toISOString(),
             ];
         })->toArray();
-    }
-
-    /**
-     * Helper to append an owner to the owners array.
-     */
-    public function addOwner(array|string $owner): void
-    {
-        $currentOwners = $this->owners ?? [];
-        $currentOwners[] = $owner;
-        $this->owners = $currentOwners;
-        $this->save();
     }
 }
