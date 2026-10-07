@@ -16,7 +16,6 @@ class Contact extends BaseModel
         'designation',
         'email',
         'phone',
-        'website',
         'address',
         'birthday',
         'status',
@@ -30,6 +29,7 @@ class Contact extends BaseModel
     protected $casts = [
         'birthday' => 'date',
         'is_delete' => 'boolean',
+        'status' => 'boolean',
     ];
 
     /**
@@ -54,6 +54,19 @@ class Contact extends BaseModel
     public function phoneNumbers(): HasMany
     {
         return $this->hasMany(ContactPhoneNumber::class);
+    }
+
+    /**
+     * Associated websites/sites for this contact.
+     */
+    public function sites(): HasMany
+    {
+        return $this->hasMany(ContactSite::class, 'contact_id');
+    }
+
+    public function contactSites(): HasMany
+    {
+        return $this->hasMany(ContactSite::class, 'contact_id');
     }
 
     /**
@@ -91,7 +104,7 @@ class Contact extends BaseModel
     public function getFullNameAttribute(): string
     {
         $name = trim("{$this->first_name} {$this->last_name}");
-        if (!empty($name)) {
+        if (! empty($name)) {
             return $name;
         }
 

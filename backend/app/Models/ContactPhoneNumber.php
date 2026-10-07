@@ -9,9 +9,8 @@ class ContactPhoneNumber extends BaseModel
     protected $table = 'contact_phone_numbers';
 
     protected $fillable = [
-        'company_id',
-        'customer_id',
         'contact_id',
+        'country_code',
         'phone_number',
         'type',
         'is_primary',
@@ -29,16 +28,6 @@ class ContactPhoneNumber extends BaseModel
         'is_whatsapp' => 'boolean',
         'is_delete' => 'boolean',
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class, 'company_id');
-    }
-
-    public function customer(): BelongsTo
-    {
-        return $this->belongsTo(Customer::class, 'customer_id');
-    }
 
     public function contact(): BelongsTo
     {

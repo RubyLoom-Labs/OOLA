@@ -9,6 +9,8 @@ use App\Models\Company;
 use App\Models\CompanySize;
 use App\Models\CompanyType;
 use App\Models\Contact;
+use App\Models\ContactPhoneNumber;
+use App\Models\ContactSite;
 use App\Models\CrmNotification;
 use App\Models\Customer;
 use App\Models\Department;
@@ -22,7 +24,6 @@ use App\Models\HostingService;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\LeadStage;
-use App\Models\LeaveRequest;
 use App\Models\Payment;
 use App\Models\Permission;
 use App\Models\Project;
@@ -73,7 +74,7 @@ class DatabaseSeeder extends Seeder
             foreach ($actions as $action) {
                 $slug = "{$module}.{$action}";
                 Permission::firstOrCreate(['slug' => $slug], [
-                    'name' => ucfirst($action) . ' ' . ucfirst($module),
+                    'name' => ucfirst($action).' '.ucfirst($module),
                     'slug' => $slug,
                     'module' => ucfirst($module),
                     'description' => "Permission to {$action} {$module}",
@@ -260,15 +261,6 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        \App\Models\ContactPhoneNumber::firstOrCreate(
-            ['company_id' => $company->id, 'phone_number' => '+94 11 234 5678'],
-            ['customer_id' => $customer->id, 'type' => 'Work', 'is_primary' => true, 'is_whatsapp' => false, 'notes' => 'Head Office Hotline']
-        );
-        \App\Models\ContactPhoneNumber::firstOrCreate(
-            ['company_id' => $company->id, 'phone_number' => '+94 77 111 2233'],
-            ['customer_id' => $customer->id, 'type' => 'WhatsApp', 'is_primary' => false, 'is_whatsapp' => true, 'notes' => 'Official Customer Support WhatsApp']
-        );
-
         $contact = Contact::firstOrCreate(
             ['company_id' => $customer->id, 'email' => 'sarah.c@apexlogistics.com'],
             [
@@ -276,18 +268,22 @@ class DatabaseSeeder extends Seeder
                 'first_name' => 'Sarah',
                 'last_name' => 'Connor',
                 'designation' => 'Chief Operations Officer',
-                'phone' => '+94 77 987 6543',
-                'status' => 'Active',
+                'status' => true,
             ]
         );
 
-        \App\Models\ContactPhoneNumber::firstOrCreate(
-            ['contact_id' => $contact->id, 'phone_number' => '+94 77 987 6543'],
-            ['type' => 'Mobile', 'is_primary' => true, 'is_whatsapp' => true, 'notes' => 'Personal Executive Mobile']
+        ContactSite::firstOrCreate(
+            ['contact_id' => $contact->id, 'url' => 'https://apexlogistics.com'],
+            ['name' => 'Official Corporate Site', 'status' => true, 'is_delete' => false]
         );
-        \App\Models\ContactPhoneNumber::firstOrCreate(
-            ['contact_id' => $contact->id, 'phone_number' => '+94 11 234 5679'],
-            ['type' => 'Direct', 'is_primary' => false, 'is_whatsapp' => false, 'notes' => 'Office Direct Extension']
+
+        ContactPhoneNumber::firstOrCreate(
+            ['contact_id' => $contact->id, 'phone_number' => '779876543'],
+            ['country_code' => '+94', 'type' => 'Mobile', 'is_primary' => true, 'is_whatsapp' => true, 'notes' => 'Personal Executive Mobile']
+        );
+        ContactPhoneNumber::firstOrCreate(
+            ['contact_id' => $contact->id, 'phone_number' => '112345679'],
+            ['country_code' => '+94', 'type' => 'Direct', 'is_primary' => false, 'is_whatsapp' => false, 'notes' => 'Office Direct Extension']
         );
 
         // 9. Sample Lead
@@ -609,7 +605,7 @@ class DatabaseSeeder extends Seeder
             [
                 'message' => 'LKR 700,000.00 advance payment was confirmed for Project PRJ-2026-001.',
                 'type' => 'payment',
-                'action_url' => '/projects/' . $project->id,
+                'action_url' => '/projects/'.$project->id,
                 'is_read' => false,
             ]
         );

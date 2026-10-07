@@ -7,7 +7,9 @@ use App\Http\Requests\Company\StoreCompanyRequest;
 use App\Http\Requests\Company\UpdateCompanyRequest;
 use App\Http\Resources\CompanyResource;
 use App\Models\Company;
+use App\Models\Contact;
 use App\Models\ContactPhoneNumber;
+use App\Models\Customer;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -49,14 +51,14 @@ class CompanyController extends Controller
             $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
                 $q->where('company_name', 'like', "%{$search}%")
-                  ->orWhere('company_code', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('owner_name', 'like', "%{$search}%")
-                  ->orWhere('city', 'like', "%{$search}%")
-                  ->orWhere('industry', 'like', "%{$search}%")
-                  ->orWhereHas('phoneNumbers', function ($pq) use ($search) {
-                      $pq->where('phone_number', 'like', "%{$search}%");
-                  });
+                    ->orWhere('company_code', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('owner_name', 'like', "%{$search}%")
+                    ->orWhere('city', 'like', "%{$search}%")
+                    ->orWhere('industry', 'like', "%{$search}%")
+                    ->orWhereHas('phoneNumbers', function ($pq) use ($search) {
+                        $pq->where('phone_number', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -81,6 +83,7 @@ class CompanyController extends Controller
         $perPage = (int) $request->input('per_page', 15);
         if ($perPage > 0) {
             $companies = $query->paginate($perPage);
+
             return response()->json([
                 'data' => CompanyResource::collection($companies),
                 'meta' => [
@@ -117,20 +120,20 @@ class CompanyController extends Controller
             $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
                 $q->where('company_name', 'like', "%{$search}%")
-                  ->orWhere('company_code', 'like', "%{$search}%");
+                    ->orWhere('company_code', 'like', "%{$search}%");
             });
         } elseif ($request->filled('q')) {
             $search = trim($request->input('q'));
             $query->where(function ($q) use ($search) {
                 $q->where('company_name', 'like', "%{$search}%")
-                  ->orWhere('company_code', 'like', "%{$search}%");
+                    ->orWhere('company_code', 'like', "%{$search}%");
             });
         } else {
             if ($request->filled('name')) {
-                $query->where('company_name', 'like', '%' . trim($request->input('name')) . '%');
+                $query->where('company_name', 'like', '%'.trim($request->input('name')).'%');
             }
             if ($request->filled('code')) {
-                $query->where('company_code', 'like', '%' . trim($request->input('code')) . '%');
+                $query->where('company_code', 'like', '%'.trim($request->input('code')).'%');
             }
         }
 
@@ -172,7 +175,7 @@ class CompanyController extends Controller
 
             $company = Company::create($validated);
 
-            if (!empty($phoneNumbers)) {
+            if (! empty($phoneNumbers)) {
                 $this->syncPhoneNumbers($company, $phoneNumbers);
             }
 
@@ -233,6 +236,7 @@ class CompanyController extends Controller
     {
         $company->logicalDelete();
         ActivityLogger::log('Company Deleted', "Deleted company: {$company->company_name} ({$company->company_code})", $company);
+
         return response()->json(['message' => 'Company removed successfully.']);
     }
 
@@ -244,6 +248,7 @@ class CompanyController extends Controller
         $company = Company::withoutGlobalScopes()->where('is_delete', true)->findOrFail($id);
         $company->restore();
         ActivityLogger::log('Company Restored', "Restored company: {$company->company_name} ({$company->company_code})", $company);
+
         return response()->json([
             'message' => 'Company restored successfully.',
             'data' => new CompanyResource($company->load(['companyType', 'companySize', 'phoneNumbers', 'primaryPhoneNumber'])),
@@ -255,6 +260,27 @@ class CompanyController extends Controller
      */
     protected function syncPhoneNumbers(Company $company, array $phoneNumbers): void
     {
+        Customer::firstOrCreate(
+            ['id' => $company->id],
+            [
+                'customer_code' => 'CUST-COMP-'.$company->id,
+                'company_name' => $company->company_name,
+                'email' => $company->email,
+                'status' => 'Active',
+            ]
+        );
+
+        $contact = $company->contacts()->first();
+        if (! $contact) {
+            $contact = Contact::create([
+                'company_id' => $company->id,
+                'company' => $company->company_name,
+                'first_name' => $company->owner_name ?? 'Primary',
+                'last_name' => 'Contact',
+                'email' => $company->email,
+            ]);
+        }
+
         $existingIds = [];
         $hasPrimary = false;
 
@@ -265,24 +291,19 @@ class CompanyController extends Controller
             }
 
             $type = is_array($item) ? ($item['type'] ?? 'Work') : 'Work';
-            $isPrimary = is_array($item) ? (bool)($item['is_primary'] ?? ($idx === 0)) : ($idx === 0);
-            $isWhatsapp = is_array($item) ? (bool)($item['is_whatsapp'] ?? false) : false;
+            $isPrimary = is_array($item) ? (bool) ($item['is_primary'] ?? ($idx === 0)) : ($idx === 0);
+            $isWhatsapp = is_array($item) ? (bool) ($item['is_whatsapp'] ?? false) : false;
             $notes = is_array($item) ? ($item['notes'] ?? null) : null;
             $id = is_array($item) ? ($item['id'] ?? null) : null;
 
-            if ($isPrimary && !$hasPrimary) {
+            if ($isPrimary && ! $hasPrimary) {
                 $hasPrimary = true;
             } elseif ($isPrimary && $hasPrimary) {
                 $isPrimary = false;
             }
 
             if ($id) {
-                $record = ContactPhoneNumber::where('id', $id)
-                    ->where(function ($q) use ($company) {
-                        $q->where('company_id', $company->id)->orWhere('customer_id', $company->id);
-                    })
-                    ->first();
-
+                $record = ContactPhoneNumber::where('id', $id)->where('contact_id', $contact->id)->first();
                 if ($record) {
                     $record->update([
                         'phone_number' => $phoneNumber,
@@ -293,12 +314,13 @@ class CompanyController extends Controller
                         'is_delete' => false,
                     ]);
                     $existingIds[] = $record->id;
+
                     continue;
                 }
             }
 
             $record = ContactPhoneNumber::create([
-                'company_id' => $company->id,
+                'contact_id' => $contact->id,
                 'phone_number' => $phoneNumber,
                 'type' => $type,
                 'is_primary' => $isPrimary,
@@ -308,13 +330,11 @@ class CompanyController extends Controller
             $existingIds[] = $record->id;
         }
 
-        ContactPhoneNumber::where(function ($q) use ($company) {
-            $q->where('company_id', $company->id)->orWhere('customer_id', $company->id);
-        })
-        ->whereNotIn('id', $existingIds)
-        ->update([
-            'is_delete' => true,
-            'deleted_at' => now(),
-        ]);
+        ContactPhoneNumber::where('contact_id', $contact->id)
+            ->whereNotIn('id', $existingIds)
+            ->update([
+                'is_delete' => true,
+                'deleted_at' => now(),
+            ]);
     }
 }

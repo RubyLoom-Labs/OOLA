@@ -8,9 +8,11 @@ use App\Http\Requests\Contact\UpdateContactRequest;
 use App\Http\Resources\ContactResource;
 use App\Models\Contact;
 use App\Models\ContactPhoneNumber;
+use App\Models\ContactSite;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ContactController extends Controller
@@ -20,7 +22,7 @@ class ContactController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Contact::with(['phoneNumbers', 'primaryPhoneNumber', 'company:id,company_name']);
+        $query = Contact::with(['sites', 'phoneNumbers', 'primaryPhoneNumber', 'company:id,company_name']);
 
         // Safe filtering by company_id / customer_id
         if ($request->filled('company_id')) {
@@ -29,9 +31,19 @@ class ContactController extends Controller
             $query->where('company_id', (int) $request->input('customer_id'));
         }
 
-        // Safe filtering by status
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
+        // Safe filtering by status (boolean 1/0, true/false, 'Active' string fallback)
+        if ($request->has('status') && $request->input('status') !== null && $request->input('status') !== '') {
+            $rawStatus = $request->input('status');
+            if (is_numeric($rawStatus)) {
+                $query->where('status', (int) $rawStatus === 1);
+            } else {
+                $statusVal = filter_var($rawStatus, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                if ($statusVal !== null) {
+                    $query->where('status', $statusVal);
+                } else {
+                    $query->where('status', strtolower($rawStatus) === 'active');
+                }
+            }
         }
 
         // Safe parameterized search against SQL injection
@@ -39,17 +51,19 @@ class ContactController extends Controller
             $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
                 $q->where('company', 'like', "%{$search}%")
-                  ->orWhere('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('designation', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('website', 'like', "%{$search}%")
-                  ->orWhere('address', 'like', "%{$search}%")
-                  ->orWhere('status', 'like', "%{$search}%")
-                  ->orWhereHas('phoneNumbers', function ($pq) use ($search) {
-                      $pq->where('phone_number', 'like', "%{$search}%");
-                  });
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('designation', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%")
+                    ->orWhereHas('phoneNumbers', function ($pq) use ($search) {
+                        $pq->where('phone_number', 'like', "%{$search}%")
+                            ->orWhere('country_code', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('sites', function ($sq) use ($search) {
+                        $sq->where('name', 'like', "%{$search}%")
+                            ->orWhere('url', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -61,8 +75,6 @@ class ContactController extends Controller
             'last_name',
             'designation',
             'email',
-            'phone',
-            'website',
             'birthday',
             'status',
             'created_at',
@@ -79,6 +91,7 @@ class ContactController extends Controller
         $perPage = (int) $request->input('per_page', 15);
         if ($perPage > 0) {
             $contacts = $query->paginate($perPage);
+
             return response()->json([
                 'data' => ContactResource::collection($contacts),
                 'meta' => [
@@ -105,24 +118,22 @@ class ContactController extends Controller
             $phoneNumbers = $payload['phone_numbers'] ?? [];
             unset($payload['phone_numbers']);
 
+            $sites = $payload['sites'] ?? [];
+            unset($payload['sites']);
+
             $contact = Contact::create($payload);
 
-            if (!empty($phoneNumbers)) {
+            if (! empty($sites)) {
+                $this->syncSites($contact, $sites);
+            }
+
+            if (! empty($phoneNumbers)) {
                 $this->syncPhoneNumbers($contact, $phoneNumbers);
-            } elseif (!empty($contact->phone)) {
-                ContactPhoneNumber::create([
-                    'customer_id' => $contact->company_id,
-                    'contact_id' => $contact->id,
-                    'phone_number' => $contact->phone,
-                    'type' => 'Mobile',
-                    'is_primary' => true,
-                    'is_whatsapp' => true,
-                ]);
             }
 
             ActivityLogger::log('Contact Created', "Created contact: {$contact->full_name}", $contact);
 
-            return (new ContactResource($contact->load(['phoneNumbers', 'primaryPhoneNumber', 'company:id,company_name'])))
+            return (new ContactResource($contact->load(['sites', 'phoneNumbers', 'primaryPhoneNumber', 'company:id,company_name'])))
                 ->response()
                 ->setStatusCode(201);
         });
@@ -135,6 +146,7 @@ class ContactController extends Controller
     {
         return new ContactResource(
             $contact->load([
+                'sites',
                 'phoneNumbers',
                 'primaryPhoneNumber',
                 'company.companyType',
@@ -159,7 +171,17 @@ class ContactController extends Controller
                 unset($payload['phone_numbers']);
             }
 
+            $sites = null;
+            if (array_key_exists('sites', $payload)) {
+                $sites = $payload['sites'];
+                unset($payload['sites']);
+            }
+
             $contact->update($payload);
+
+            if ($sites !== null) {
+                $this->syncSites($contact, $sites);
+            }
 
             if ($phoneNumbers !== null) {
                 $this->syncPhoneNumbers($contact, $phoneNumbers);
@@ -167,7 +189,7 @@ class ContactController extends Controller
 
             ActivityLogger::log('Contact Updated', "Updated contact: {$contact->full_name}", $contact);
 
-            return new ContactResource($contact->load(['phoneNumbers', 'primaryPhoneNumber', 'company:id,company_name']));
+            return new ContactResource($contact->load(['sites', 'phoneNumbers', 'primaryPhoneNumber', 'company:id,company_name']));
         });
     }
 
@@ -176,8 +198,26 @@ class ContactController extends Controller
      */
     public function destroy(Contact $contact): JsonResponse
     {
-        $contact->logicalDelete();
+        DB::transaction(function () use ($contact) {
+            $contact->logicalDelete();
+
+            $deletedBy = Auth::id();
+
+            ContactSite::where('contact_id', $contact->id)->update([
+                'is_delete' => true,
+                'deleted_at' => now(),
+                'deleted_by' => $deletedBy,
+            ]);
+
+            ContactPhoneNumber::where('contact_id', $contact->id)->update([
+                'is_delete' => true,
+                'deleted_at' => now(),
+                'deleted_by' => $deletedBy,
+            ]);
+        });
+
         ActivityLogger::log('Contact Deleted', "Deleted contact: {$contact->full_name}", $contact);
+
         return response()->json(['message' => 'Contact removed successfully (logical delete).']);
     }
 
@@ -186,13 +226,29 @@ class ContactController extends Controller
      */
     public function restore(int $id): JsonResponse
     {
-        $contact = Contact::withoutGlobalScopes()->where('is_delete', true)->findOrFail($id);
-        $contact->restore();
-        ActivityLogger::log('Contact Restored', "Restored contact: {$contact->full_name}", $contact);
-        return response()->json([
-            'message' => 'Contact restored successfully.',
-            'data' => new ContactResource($contact->load(['phoneNumbers', 'primaryPhoneNumber'])),
-        ]);
+        return DB::transaction(function () use ($id) {
+            $contact = Contact::withoutGlobalScopes()->where('is_delete', true)->findOrFail($id);
+            $contact->restore();
+
+            ContactSite::withoutGlobalScopes()->where('contact_id', $contact->id)->update([
+                'is_delete' => false,
+                'deleted_at' => null,
+                'deleted_by' => null,
+            ]);
+
+            ContactPhoneNumber::withoutGlobalScopes()->where('contact_id', $contact->id)->update([
+                'is_delete' => false,
+                'deleted_at' => null,
+                'deleted_by' => null,
+            ]);
+
+            ActivityLogger::log('Contact Restored', "Restored contact: {$contact->full_name}", $contact);
+
+            return response()->json([
+                'message' => 'Contact restored successfully.',
+                'data' => new ContactResource($contact->load(['sites', 'phoneNumbers', 'primaryPhoneNumber', 'company:id,company_name'])),
+            ]);
+        });
     }
 
     /**
@@ -211,12 +267,25 @@ class ContactController extends Controller
     }
 
     /**
-     * Synchronize phone numbers safely.
+     * Synchronize phone numbers safely and enforce single is_primary selection.
      */
     protected function syncPhoneNumbers(Contact $contact, array $phoneNumbers): void
     {
         $existingIds = [];
-        $hasPrimary = false;
+        $primaryIndex = null;
+
+        // Find explicit primary item index if provided
+        foreach ($phoneNumbers as $idx => $item) {
+            if (is_array($item) && ! empty($item['is_primary'])) {
+                $primaryIndex = $idx;
+                break;
+            }
+        }
+
+        // If no explicit primary was marked, default the first item as primary
+        if ($primaryIndex === null && count($phoneNumbers) > 0) {
+            $primaryIndex = 0;
+        }
 
         foreach ($phoneNumbers as $idx => $item) {
             $phoneNumber = is_array($item) ? ($item['phone_number'] ?? null) : $item;
@@ -224,22 +293,18 @@ class ContactController extends Controller
                 continue;
             }
 
+            $countryCode = is_array($item) ? ($item['country_code'] ?? null) : null;
             $type = is_array($item) ? ($item['type'] ?? 'Mobile') : 'Mobile';
-            $isPrimary = is_array($item) ? (bool)($item['is_primary'] ?? ($idx === 0)) : ($idx === 0);
-            $isWhatsapp = is_array($item) ? (bool)($item['is_whatsapp'] ?? false) : false;
+            $isPrimary = ($idx === $primaryIndex);
+            $isWhatsapp = is_array($item) ? (bool) ($item['is_whatsapp'] ?? false) : false;
             $notes = is_array($item) ? ($item['notes'] ?? null) : null;
             $id = is_array($item) ? ($item['id'] ?? null) : null;
-
-            if ($isPrimary && !$hasPrimary) {
-                $hasPrimary = true;
-            } elseif ($isPrimary && $hasPrimary) {
-                $isPrimary = false;
-            }
 
             if ($id) {
                 $record = ContactPhoneNumber::where('id', $id)->where('contact_id', $contact->id)->first();
                 if ($record) {
                     $record->update([
+                        'country_code' => $countryCode,
                         'phone_number' => $phoneNumber,
                         'type' => $type,
                         'is_primary' => $isPrimary,
@@ -248,13 +313,14 @@ class ContactController extends Controller
                         'is_delete' => false,
                     ]);
                     $existingIds[] = $record->id;
+
                     continue;
                 }
             }
 
             $record = ContactPhoneNumber::create([
-                'customer_id' => $contact->company_id,
                 'contact_id' => $contact->id,
+                'country_code' => $countryCode,
                 'phone_number' => $phoneNumber,
                 'type' => $type,
                 'is_primary' => $isPrimary,
@@ -269,13 +335,64 @@ class ContactController extends Controller
             ->update([
                 'is_delete' => true,
                 'deleted_at' => now(),
+                'deleted_by' => Auth::id(),
             ]);
+    }
 
-        $primary = ContactPhoneNumber::where('contact_id', $contact->id)->where('is_primary', true)->first();
-        if ($primary && $contact->phone !== $primary->phone_number) {
-            $contact->phone = $primary->phone_number;
-            $contact->saveQuietly();
+    /**
+     * Synchronize contact sites/websites safely.
+     */
+    protected function syncSites(Contact $contact, array $sites): void
+    {
+        $existingIds = [];
+
+        foreach ($sites as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $name = $item['name'] ?? null;
+            $url = $item['url'] ?? null;
+            $status = isset($item['status']) ? (bool) $item['status'] : true;
+            $isDelete = isset($item['is_delete']) ? (bool) $item['is_delete'] : false;
+            $id = $item['id'] ?? null;
+
+            if (empty($url) && empty($name) && ! $id) {
+                continue;
+            }
+
+            if ($id) {
+                $record = ContactSite::where('id', $id)->where('contact_id', $contact->id)->first();
+                if ($record) {
+                    $record->update([
+                        'name' => $name,
+                        'url' => $url,
+                        'status' => $status,
+                        'is_delete' => $isDelete,
+                    ]);
+                    $existingIds[] = $record->id;
+
+                    continue;
+                }
+            }
+
+            $record = ContactSite::create([
+                'contact_id' => $contact->id,
+                'name' => $name,
+                'url' => $url,
+                'status' => $status,
+                'is_delete' => $isDelete,
+            ]);
+            $existingIds[] = $record->id;
         }
+
+        ContactSite::where('contact_id', $contact->id)
+            ->whereNotIn('id', $existingIds)
+            ->update([
+                'is_delete' => true,
+                'deleted_at' => now(),
+                'deleted_by' => Auth::id(),
+            ]);
     }
 
     /**
@@ -284,13 +401,13 @@ class ContactController extends Controller
     protected function normalizeContactData(array $data): array
     {
         // Support company_name -> company
-        if (isset($data['company_name']) && !isset($data['company'])) {
+        if (isset($data['company_name']) && ! isset($data['company'])) {
             $data['company'] = $data['company_name'];
         }
         unset($data['company_name']);
 
         // Support customer_id -> company_id
-        if (isset($data['customer_id']) && !isset($data['company_id'])) {
+        if (isset($data['customer_id']) && ! isset($data['company_id'])) {
             $data['company_id'] = $data['customer_id'];
         }
         unset($data['customer_id']);

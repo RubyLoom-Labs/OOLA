@@ -22,20 +22,28 @@ class UpdateContactRequest extends FormRequest
             'last_name' => ['nullable', 'string', 'max:100'],
             'designation' => ['nullable', 'string', 'max:100'],
             'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'website' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string'],
             'birthday' => ['nullable', 'date'],
-            'status' => ['nullable', 'string', 'max:50'],
-            
+            'status' => ['nullable', 'boolean'],
+
+            // Nested sites support
+            'sites' => ['nullable', 'array'],
+            'sites.*.id' => ['nullable', 'integer'],
+            'sites.*.name' => ['nullable', 'string', 'max:255'],
+            'sites.*.url' => ['nullable', 'string', 'max:500'],
+            'sites.*.is_delete' => ['nullable', 'boolean'],
+            'sites.*.status' => ['nullable', 'boolean'],
+
             // Nested phone numbers support
             'phone_numbers' => ['nullable', 'array'],
             'phone_numbers.*.id' => ['nullable', 'integer'],
+            'phone_numbers.*.country_code' => ['nullable', 'string', 'max:20'],
             'phone_numbers.*.phone_number' => ['nullable', 'string', 'max:50'],
             'phone_numbers.*.type' => ['nullable', 'string', 'max:50'],
             'phone_numbers.*.is_primary' => ['nullable', 'boolean'],
             'phone_numbers.*.is_whatsapp' => ['nullable', 'boolean'],
             'phone_numbers.*.notes' => ['nullable', 'string', 'max:255'],
+            'phone_numbers.*.is_delete' => ['nullable', 'boolean'],
         ];
     }
 }

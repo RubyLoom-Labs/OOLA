@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 
 abstract class BaseModel extends Model
 {
-    use HasFactory, HasIsDelete, HasAuditFields;
+    use HasAuditFields, HasFactory, HasIsDelete;
 
     /**
      * Default casts for all models.
@@ -20,4 +20,11 @@ abstract class BaseModel extends Model
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
+
+    public function getCasts(): array
+    {
+        return array_merge([
+            'is_delete' => 'boolean',
+        ], parent::getCasts());
+    }
 }

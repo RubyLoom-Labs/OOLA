@@ -15,7 +15,7 @@ class ContactResource extends JsonResource
             : null;
 
         // Resolve company name concisely
-        $companyName = is_string($this->company) && !empty($this->company)
+        $companyName = is_string($this->company) && ! empty($this->company)
             ? $this->company
             : ($companyRelation?->company_name ?? ($this->relationLoaded('customer') && $this->getRelation('customer') ? $this->getRelation('customer')->company_name : null));
 
@@ -27,16 +27,15 @@ class ContactResource extends JsonResource
             'last_name' => $this->last_name,
             'full_name' => $this->full_name,
             'email' => $this->email,
-            'phone' => $this->phone,
             'designation' => $this->designation,
-            'website' => $this->website,
             'address' => $this->address,
             'birthday' => $this->birthday?->format('Y-m-d'),
-            'status' => $this->status ?? 'Active',
+            'status' => (bool) ($this->status ?? true),
+            'sites' => ContactSiteResource::collection($this->whenLoaded('sites')),
             'phone_numbers' => ContactPhoneNumberResource::collection($this->whenLoaded('phoneNumbers')),
             'primary_phone_number' => new ContactPhoneNumberResource($this->whenLoaded('primaryPhoneNumber')),
-            
-            // Detailed company and projects info when loaded (e.g. GET /api/v1/contacts/{id})
+
+            // Detailed company and projects info when loaded
             'company' => $this->when($companyRelation !== null, function () use ($companyRelation) {
                 return new CompanyResource($companyRelation);
             }),
@@ -47,6 +46,8 @@ class ContactResource extends JsonResource
                 return $this->projects_count;
             }),
 
+            'created_by' => $this->created_by,
+            'updated_by' => $this->updated_by,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Contact;
+use App\Models\ContactPhoneNumber;
+use App\Models\ContactSite;
 use App\Models\Customer;
 use App\Models\Project;
 use App\Models\User;
@@ -31,7 +32,7 @@ class ContactExtendedTest extends TestCase
         $storeResponse->assertStatus(401);
     }
 
-    public function test_can_create_contact_with_cleaned_properties_and_multiple_phones(): void
+    public function test_can_create_contact_with_sites_and_multiple_phones_including_country_code(): void
     {
         $admin = User::where('email', 'admin@ooralabz.com')->first();
         $customer = Customer::first();
@@ -43,21 +44,29 @@ class ContactExtendedTest extends TestCase
             'last_name' => 'Vance',
             'designation' => 'Chief Executive Officer',
             'email' => 'alex@nexusglobal.com',
-            'phone' => '+94 77 123 4567',
-            'website' => 'https://nexusglobal.io',
             'address' => '100 Innovation Way, Colombo 03',
             'birthday' => '1988-06-15',
-            'status' => 'Active',
+            'status' => true,
+            'sites' => [
+                [
+                    'name' => 'Nexus Main Site',
+                    'url' => 'https://nexusglobal.io',
+                    'status' => true,
+                    'is_delete' => false,
+                ],
+            ],
             'phone_numbers' => [
                 [
-                    'phone_number' => '+94 77 123 4567',
+                    'country_code' => '+94',
+                    'phone_number' => '771234567',
                     'type' => 'Mobile',
                     'is_primary' => true,
                     'is_whatsapp' => true,
                     'notes' => 'Direct VIP mobile',
                 ],
                 [
-                    'phone_number' => '+94 11 200 3000',
+                    'country_code' => '+94',
+                    'phone_number' => '112003000',
                     'type' => 'Work',
                     'is_primary' => false,
                     'is_whatsapp' => false,
@@ -76,12 +85,14 @@ class ContactExtendedTest extends TestCase
             ->assertJsonPath('data.full_name', 'Alexander Vance')
             ->assertJsonPath('data.designation', 'Chief Executive Officer')
             ->assertJsonPath('data.email', 'alex@nexusglobal.com')
-            ->assertJsonPath('data.phone', '+94 77 123 4567')
-            ->assertJsonPath('data.website', 'https://nexusglobal.io')
             ->assertJsonPath('data.address', '100 Innovation Way, Colombo 03')
             ->assertJsonPath('data.birthday', '1988-06-15')
-            ->assertJsonPath('data.status', 'Active')
-            ->assertJsonCount(2, 'data.phone_numbers');
+            ->assertJsonPath('data.status', true)
+            ->assertJsonCount(1, 'data.sites')
+            ->assertJsonPath('data.sites.0.url', 'https://nexusglobal.io')
+            ->assertJsonCount(2, 'data.phone_numbers')
+            ->assertJsonPath('data.phone_numbers.0.country_code', '+94')
+            ->assertJsonPath('data.phone_numbers.0.phone_number', '771234567');
 
         $contactId = $response->json('data.id');
         $this->assertDatabaseHas('contacts', [
@@ -91,7 +102,22 @@ class ContactExtendedTest extends TestCase
             'first_name' => 'Alexander',
             'last_name' => 'Vance',
             'email' => 'alex@nexusglobal.com',
-            'status' => 'Active',
+            'status' => 1,
+        ]);
+
+        $this->assertDatabaseHas('contact_sites', [
+            'contact_id' => $contactId,
+            'name' => 'Nexus Main Site',
+            'url' => 'https://nexusglobal.io',
+            'status' => 1,
+            'is_delete' => 0,
+        ]);
+
+        $this->assertDatabaseHas('contact_phone_numbers', [
+            'contact_id' => $contactId,
+            'country_code' => '+94',
+            'phone_number' => '771234567',
+            'is_delete' => 0,
         ]);
     }
 
@@ -152,9 +178,9 @@ class ContactExtendedTest extends TestCase
                     'last_name',
                     'full_name',
                     'email',
-                    'phone',
                     'designation',
                     'status',
+                    'sites',
                     'phone_numbers',
                     'company' => [
                         'id',
@@ -182,19 +208,19 @@ class ContactExtendedTest extends TestCase
 
         // SQL injection payload in search
         $injectionSearch = "Apex' OR '1'='1";
-        $response = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/contacts?search=" . urlencode($injectionSearch));
+        $response = $this->actingAs($admin, 'sanctum')->getJson('/api/v1/contacts?search='.urlencode($injectionSearch));
         $response->assertStatus(200);
 
         // SQL injection payload in sort_by
-        $injectionSort = "id; DROP TABLE contacts; --";
-        $sortResponse = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/contacts?sort_by=" . urlencode($injectionSort));
-        $sortResponse->assertStatus(200); // Falls back to default sort without executing rogue SQL
+        $injectionSort = 'id; DROP TABLE contacts; --';
+        $sortResponse = $this->actingAs($admin, 'sanctum')->getJson('/api/v1/contacts?sort_by='.urlencode($injectionSort));
+        $sortResponse->assertStatus(200);
 
-        // Assert contacts table is completely intact
+        // Assert contacts table is intact
         $this->assertTrue(Contact::count() > 0);
     }
 
-    public function test_contact_logical_delete_and_restore(): void
+    public function test_contact_logical_delete_and_restore_cascades_to_phone_numbers_and_sites(): void
     {
         $admin = User::where('email', 'admin@ooralabz.com')->first();
         $contact = Contact::create([
@@ -202,6 +228,18 @@ class ContactExtendedTest extends TestCase
             'first_name' => 'Temporary',
             'last_name' => 'Contact',
             'email' => 'temp.contact@deletable.com',
+        ]);
+
+        $site = ContactSite::create([
+            'contact_id' => $contact->id,
+            'name' => 'Temp Site',
+            'url' => 'https://temp.deletable.com',
+        ]);
+
+        $phone = ContactPhoneNumber::create([
+            'contact_id' => $contact->id,
+            'country_code' => '+1',
+            'phone_number' => '5551234567',
         ]);
 
         $contactId = $contact->id;
@@ -212,6 +250,8 @@ class ContactExtendedTest extends TestCase
 
         // Excluded from standard queries
         $this->assertNull(Contact::find($contactId));
+        $this->assertNull(ContactSite::find($site->id));
+        $this->assertNull(ContactPhoneNumber::find($phone->id));
 
         // Restore
         $restoreResponse = $this->actingAs($admin, 'sanctum')->postJson("/api/v1/contacts/{$contactId}/restore");
@@ -219,5 +259,7 @@ class ContactExtendedTest extends TestCase
             ->assertJsonPath('data.company_name', 'Deletable Contact Corp');
 
         $this->assertNotNull(Contact::find($contactId));
+        $this->assertNotNull(ContactSite::find($site->id));
+        $this->assertNotNull(ContactPhoneNumber::find($phone->id));
     }
 }
