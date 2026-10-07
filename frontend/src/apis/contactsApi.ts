@@ -6,14 +6,34 @@
 import apiClient, { type ApiResponse } from './client'
 import { capitalizeWords } from '@/lib/utils'
 
+export interface ContactSite {
+  id?: number
+  company_id?: number
+  customer_id?: number
+  contact_id?: number
+  name: string
+  url: string
+  status?: boolean
+  is_delete?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
 export interface ContactPhoneNumber {
   id?: number
-  country_code?: string
+  company_id?: number
+  customer_id?: number
+  contact_id?: number
+  country_code: string
   number?: string
-  phone_number?: string
-  type?: 'mobile' | 'work' | 'home' | 'other' | string
+  phone_number: string
+  type: string
   is_primary?: boolean
   is_whatsapp?: boolean
+  notes?: string
+  is_delete?: boolean
+  created_at?: string
+  updated_at?: string
 }
 
 export interface ContactOwner {
@@ -102,6 +122,7 @@ export interface ContactTask {
 export interface Contact {
   id: number
   company_id?: number
+  customer_id?: number
   company_name?: string
   company?: string | ContactCompany | any
   first_name: string
@@ -113,6 +134,7 @@ export interface Contact {
   phone_country_code?: string
   phone_numbers?: ContactPhoneNumber[]
   primary_phone_number?: ContactPhoneNumber
+  sites?: ContactSite[]
   designation?: string
   company_type?: string
   company_web?: string
@@ -158,24 +180,22 @@ export interface ContactQueryParams {
 }
 
 export interface CreateContactPayload {
+  company_id?: number
+  customer_id?: number
+  company?: string
+  company_name?: string
   first_name: string
   last_name: string
   designation?: string
   email: string
-  phone: string
-  phone_country_code?: string
-  phone_numbers?: ContactPhoneNumber[]
-  company_id?: number
-  company_name?: string
-  company?: string
-  company_type?: string
-  company_web?: string
-  website?: string
   address?: string
-  state?: string
-  country?: string
+  birthday?: string
   date_of_birth?: string
-  status?: 'Active' | 'Inactive'
+  status?: boolean | 'Active' | 'Inactive'
+  sites?: ContactSite[]
+  phone_numbers?: ContactPhoneNumber[]
+  phone?: string
+  phone_country_code?: string
   avatar?: string
   notes?: string
   tags?: string[]
@@ -206,7 +226,7 @@ export interface ContactStats {
 }
 
 /**
- * Normalizes Contact data so word capitalization is uniform across all models and features.
+ * Normalizes Contact data so word capitalization & phone/status structures are uniform across all models and features.
  */
 export function normalizeContact(c: Contact): Contact {
   if (!c) return c
@@ -224,6 +244,21 @@ export function normalizeContact(c: Contact): Contact {
     companyDisplay = capitalizeWords(c.company_name)
   }
 
+  let statusDisplay = 'Active'
+  if (typeof c.status === 'boolean') {
+    statusDisplay = c.status ? 'Active' : 'Inactive'
+  } else if (c.status) {
+    statusDisplay = capitalizeWords(c.status as string) || 'Active'
+  }
+
+  let primaryPhone = c.phone || ''
+  if (c.phone_numbers && c.phone_numbers.length > 0) {
+    const primaryObj = c.phone_numbers.find((p) => p.is_primary) || c.phone_numbers[0]
+    if (primaryObj) {
+      primaryPhone = `${primaryObj.country_code || ''} ${primaryObj.phone_number || ''}`.trim()
+    }
+  }
+
   return {
     ...c,
     first_name: firstName,
@@ -233,8 +268,10 @@ export function normalizeContact(c: Contact): Contact {
     company_name: companyDisplay,
     company: companyDisplay || c.company,
     designation: capitalizeWords(c.designation),
-    status: (capitalizeWords(c.status) as any) || 'Active',
-    state: capitalizeWords(c.state),
+    status: statusDisplay,
+    birthday: c.birthday || c.date_of_birth,
+    date_of_birth: c.date_of_birth || c.birthday,
+    phone: primaryPhone,
     country: capitalizeWords(c.country),
     company_type: capitalizeWords(c.company_type),
     tags: Array.isArray(c.tags) ? c.tags.map(capitalizeWords) : c.tags,

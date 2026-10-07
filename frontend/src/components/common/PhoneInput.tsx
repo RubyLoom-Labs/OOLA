@@ -151,13 +151,13 @@ export default function PhoneInput({
     onNumberChange(e.target.value.replace(/[^0-9\s\-().]/g, ''))
   }
 
-  const btnHeight = isSm ? 34 : 40
+  const btnHeight = isSm ? 34 : 38
 
   return (
     <div
-      className={`pi-wrapper${isSm ? ' pi-sm' : ''}`}
+      className={`pi-wrapper ${isSm ? 'pi-sm' : ''} w-full`}
       ref={wrapperRef}
-      style={{ position: 'relative', display: 'flex', gap: 0 }}
+      style={{ position: 'relative', display: 'flex', gap: 0, width: '100%', alignItems: 'stretch' }}
     >
       {/* ── Dial Code Trigger Button ── */}
       <button

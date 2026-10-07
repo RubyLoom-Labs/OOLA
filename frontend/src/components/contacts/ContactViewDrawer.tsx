@@ -5,6 +5,8 @@ import {
   MoreHorizontal,
   Mail,
   Phone,
+  MessageCircle,
+  Star,
   Building2,
   Briefcase,
   Globe,
@@ -27,6 +29,8 @@ import {
   type Contact,
   type ContactProject,
   type ContactCompany,
+  type ContactPhoneNumber,
+  type ContactSite,
   type UpdateContactPayload,
   contactsApi,
 } from '@/apis/contactsApi'
@@ -35,7 +39,7 @@ import SlideDrawer from '@/components/common/SlideDrawer'
 import StatusToggle from '@/components/common/StatusToggle'
 import ConfirmationModal from '@/components/common/ConfirmationModal'
 import CompanySelect from '@/components/companies/CompanySelect'
-import PhoneInput, { validatePhone, validateEmail } from '@/components/common/PhoneInput'
+import PhoneInput, { validateEmail } from '@/components/common/PhoneInput'
 import { capitalizeWords } from '@/lib/utils'
 
 interface ContactViewDrawerProps {
@@ -45,36 +49,27 @@ interface ContactViewDrawerProps {
   initialEditMode?: boolean
   onSave?: (updatedContact: Contact) => void
   onDelete: (contactId: number) => void
-  onRestore: (contactId: number) => void
+  onRestore?: (contactId: number) => void
 }
 
 type TabType = 'overview' | 'activities' | 'projects' | 'deals' | 'notes' | 'files'
 
-const COUNTRIES = [
-  'Sri Lanka',
-  'United States',
-  'United Kingdom',
-  'Australia',
-  'Singapore',
-  'United Arab Emirates',
-  'Canada',
-  'Germany',
-  'India',
-  'Other',
-]
+export interface PhoneNumberInputState {
+  id?: number
+  country_code: string
+  number: string
+  type: string
+  is_primary: boolean
+  is_whatsapp: boolean
+  notes?: string
+}
 
-const STATES = [
-  'Western Province',
-  'Central Province',
-  'Southern Province',
-  'California',
-  'New York',
-  'Texas',
-  'London',
-  'Victoria',
-  'Dubai',
-  'Other',
-]
+export interface SiteInputState {
+  id?: number
+  name: string
+  url: string
+  status?: boolean
+}
 
 export default function ContactViewDrawer({
   contact,
@@ -99,13 +94,20 @@ export default function ContactViewDrawer({
   const [lastName, setLastName] = useState('')
   const [designation, setDesignation] = useState('')
   const [email, setEmail] = useState('')
-  const [phoneCountryCode, setPhoneCountryCode] = useState('+94')
-  const [phone, setPhone] = useState('')
+
+  // Multi Phone Numbers State
+  const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumberInputState[]>([
+    { country_code: '+94', number: '', type: 'Mobile', is_primary: true, is_whatsapp: false, notes: '' }
+  ])
+
+  // Multi Websites & Social State
+  const [sites, setSites] = useState<SiteInputState[]>([
+    { name: 'Website', url: '', status: true }
+  ])
+
   const [companyId, setCompanyId] = useState<number | undefined>(undefined)
   const [companyName, setCompanyName] = useState<string>('')
   const [address, setAddress] = useState('')
-  const [state, setState] = useState('Western Province')
-  const [country, setCountry] = useState('Sri Lanka')
   const [dateOfBirth, setDateOfBirth] = useState('')
   const [status, setStatus] = useState<'Active' | 'Inactive'>('Active')
   const [notes, setNotes] = useState('')
@@ -116,8 +118,81 @@ export default function ContactViewDrawer({
 
   // Validation state for edit mode
   const [emailError, setEmailError] = useState<string | null>(null)
-  const [phoneError, setPhoneError] = useState<string | null>(null)
-  const [touched, setTouched] = useState({ email: false, phone: false })
+  const [touched, setTouched] = useState({ email: false })
+
+  const handleAddSite = () => {
+    setSites((prev) => [...prev, { name: 'LinkedIn', url: '', status: true }])
+  }
+
+  const handleRemoveSite = (index: number) => {
+    setSites((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)))
+  }
+
+  const handleSiteNameChange = (index: number, name: string) => {
+    setSites((prev) => prev.map((item, i) => (i === index ? { ...item, name } : item)))
+  }
+
+  const handleSiteUrlChange = (index: number, url: string) => {
+    setSites((prev) => prev.map((item, i) => (i === index ? { ...item, url } : item)))
+  }
+
+  const handleAddPhoneNumber = () => {
+    setPhoneNumbers((prev) => [
+      ...prev,
+      { country_code: '+94', number: '', type: 'Work', is_primary: prev.length === 0, is_whatsapp: false, notes: '' }
+    ])
+  }
+
+  const handleRemovePhoneNumber = (index: number) => {
+    setPhoneNumbers((prev) => {
+      if (prev.length <= 1) return prev
+      const updated = prev.filter((_, i) => i !== index)
+      // If we removed the primary number, make the first one primary
+      if (!updated.some((p) => p.is_primary) && updated.length > 0) {
+        updated[0].is_primary = true
+      }
+      return updated
+    })
+  }
+
+  const handleSetPrimaryPhone = (index: number) => {
+    setPhoneNumbers((prev) =>
+      prev.map((item, i) => ({
+        ...item,
+        is_primary: i === index,
+      }))
+    )
+  }
+
+  const handlePhoneCountryCodeChange = (index: number, code: string) => {
+    setPhoneNumbers((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, country_code: code } : item))
+    )
+  }
+
+  const handlePhoneNumberChange = (index: number, num: string) => {
+    setPhoneNumbers((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, number: num } : item))
+    )
+  }
+
+  const handlePhoneTypeChange = (index: number, type: string) => {
+    setPhoneNumbers((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, type } : item))
+    )
+  }
+
+  const handlePhoneWhatsAppChange = (index: number, is_whatsapp: boolean) => {
+    setPhoneNumbers((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, is_whatsapp } : item))
+    )
+  }
+
+  const handlePhoneNotesChange = (index: number, noteVal: string) => {
+    setPhoneNumbers((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, notes: noteVal } : item))
+    )
+  }
 
   const getContactFullName = (c: Contact | null): string => {
     if (!c) return ''
@@ -137,17 +212,60 @@ export default function ContactViewDrawer({
     setDesignation(c.designation || '')
     setEmail(c.email || '')
 
-    if (c.phone) {
-      const phoneMatch = c.phone.match(/^(\+\d+)\s*(.*)$/)
-      if (phoneMatch) {
-        setPhoneCountryCode(phoneMatch[1])
-        setPhone(phoneMatch[2])
-      } else {
-        setPhone(c.phone)
-      }
-    } else {
-      setPhone('')
+    // Parse Phone Numbers
+    let parsedPhones: PhoneNumberInputState[] = []
+    if (c.phone_numbers && c.phone_numbers.length > 0) {
+      const hasExplicitPrimary = c.phone_numbers.some((p) => p.is_primary)
+      parsedPhones = c.phone_numbers.map((p, idx) => {
+        let cCode = p.country_code || '+94'
+        let num = p.number || p.phone_number || ''
+        num = num.replace(/^(\+\d+)\s*/, '')
+        return {
+          id: p.id,
+          country_code: cCode,
+          number: num,
+          type: p.type || 'Mobile',
+          is_primary: Boolean(p.is_primary ?? (!hasExplicitPrimary && idx === 0)),
+          is_whatsapp: Boolean(p.is_whatsapp),
+          notes: p.notes || '',
+        }
+      })
+    } else if (c.phone) {
+      const match = c.phone.match(/^(\+\d+)\s*(.*)$/)
+      parsedPhones = [
+        {
+          country_code: match ? match[1] : '+94',
+          number: match ? match[2] : c.phone,
+          type: 'Mobile',
+          is_primary: true,
+          is_whatsapp: false,
+          notes: '',
+        }
+      ]
     }
+
+    if (parsedPhones.length === 0) {
+      parsedPhones = [{ country_code: '+94', number: '', type: 'Mobile', is_primary: true, is_whatsapp: false, notes: '' }]
+    }
+
+    setPhoneNumbers(parsedPhones)
+
+    // Parse Sites / Websites & Social links
+    let parsedSites: SiteInputState[] = []
+    if (c.sites && Array.isArray(c.sites) && c.sites.length > 0) {
+      parsedSites = c.sites.map((s) => ({
+        id: s.id,
+        name: s.name || 'Website',
+        url: s.url || '',
+        status: s.status !== false,
+      }))
+    } else if (c.company_web || c.website) {
+      parsedSites = [{ name: 'Website', url: c.company_web || c.website || '', status: true }]
+    }
+    if (parsedSites.length === 0) {
+      parsedSites = [{ name: 'Website', url: '', status: true }]
+    }
+    setSites(parsedSites)
 
     // Extract Company info
     const compId =
@@ -160,8 +278,6 @@ export default function ContactViewDrawer({
     setCompanyId(compId)
     setCompanyName(compName)
     setAddress(c.address || '')
-    setState(c.state || 'Western Province')
-    setCountry(c.country || 'Sri Lanka')
     setDateOfBirth(c.date_of_birth || c.birthday || '')
     setStatus(c.status === 'Inactive' ? 'Inactive' : 'Active')
     setNotes(c.notes || '')
@@ -228,9 +344,8 @@ export default function ContactViewDrawer({
     if (localContact) {
       populateForm(localContact)
     }
-    setTouched({ email: false, phone: false })
+    setTouched({ email: false })
     setEmailError(null)
-    setPhoneError(null)
     setIsEditing(true)
   }
 
@@ -239,9 +354,8 @@ export default function ContactViewDrawer({
       populateForm(localContact)
     }
     setValidationError(null)
-    setTouched({ email: false, phone: false })
+    setTouched({ email: false })
     setEmailError(null)
-    setPhoneError(null)
     setIsEditing(false)
   }
 
@@ -255,17 +369,15 @@ export default function ContactViewDrawer({
     if (!localContact) return
 
     const eErr = validateEmail(email)
-    const pErr = validatePhone(phone, phoneCountryCode)
     setEmailError(eErr)
-    setPhoneError(pErr)
-    setTouched({ email: true, phone: true })
+    setTouched((t) => ({ ...t, email: true }))
 
     if (!firstName.trim() || !lastName.trim()) {
       setValidationError('Please fill in required fields: First Name and Last Name')
       return
     }
-    if (eErr || pErr) {
-      setValidationError(eErr ?? pErr)
+    if (eErr) {
+      setValidationError(eErr)
       return
     }
     setValidationError(null)
@@ -276,25 +388,50 @@ export default function ContactViewDrawer({
     if (!localContact) return
     setSaveLoading(true)
     try {
-      const formattedPhone = phone.trim()
-        ? `${phoneCountryCode} ${phone.trim()}`.trim()
+      const validPhones = phoneNumbers.filter((p) => p.number.trim() !== '')
+      const hasExplicitPrimary = validPhones.some((p) => p.is_primary)
+      const formattedPhoneNumbers: ContactPhoneNumber[] = validPhones.map((p, idx) => ({
+        id: p.id,
+        company_id: companyId,
+        customer_id: localContact.customer_id || 1,
+        country_code: p.country_code,
+        phone_number: p.number.replace(/\s+/g, ''),
+        type: p.type || 'Mobile',
+        is_primary: Boolean(p.is_primary ?? (!hasExplicitPrimary && idx === 0)),
+        is_whatsapp: Boolean(p.is_whatsapp),
+        notes: p.notes || undefined,
+      }))
+
+      const primaryPhoneObj = formattedPhoneNumbers.find((p) => p.is_primary) || formattedPhoneNumbers[0]
+      const primaryPhoneStr = primaryPhoneObj
+        ? `${primaryPhoneObj.country_code} ${primaryPhoneObj.phone_number}`
         : ''
 
+      const validSites = sites.filter((s) => s.url.trim() !== '')
+      const formattedSites: ContactSite[] = validSites.map((s) => ({
+        ...(s.id ? { id: s.id } : {}),
+        name: s.name || 'Website',
+        url: s.url.trim().startsWith('http') ? s.url.trim() : `https://${s.url.trim()}`,
+        status: true,
+      }))
+
       const payload: UpdateContactPayload = {
+        company_id: companyId,
+        customer_id: localContact.customer_id || 1,
+        company: companyName,
+        company_name: companyName,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         designation: designation.trim(),
         email: email.trim(),
-        phone: formattedPhone,
-        phone_country_code: phoneCountryCode,
-        company_id: companyId,
-        company_name: companyName,
-        company: companyName,
-        date_of_birth: dateOfBirth,
         address: address.trim(),
-        state,
-        country,
-        status,
+        birthday: dateOfBirth || undefined,
+        date_of_birth: dateOfBirth || undefined,
+        status: status === 'Active',
+        phone: primaryPhoneStr,
+        phone_country_code: primaryPhoneObj?.country_code || '+94',
+        phone_numbers: formattedPhoneNumbers,
+        sites: formattedSites,
         notes,
         avatar,
       }
@@ -452,12 +589,12 @@ export default function ContactViewDrawer({
               {showMoreMenu && (
                 <div
                   className="dropdown-menu animate-fade-in"
-                  style={{ right: 0, top: '100%', marginTop: 4, zIndex: 50 }}
+                  style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 50 }}
                 >
                   {localContact.status === 'Archived' ? (
                     <button
                       className="dropdown-item text-success"
-                      onClick={() => { setShowMoreMenu(false); onRestore(localContact.id) }}
+                      onClick={() => { setShowMoreMenu(false); if (onRestore) onRestore(localContact.id) }}
                     >
                       <RotateCcw size={14} /> Restore Contact
                     </button>
@@ -560,12 +697,6 @@ export default function ContactViewDrawer({
               <div className="cvd-card">
                 <div className="cvd-card-header">
                   <span className="cvd-card-title">Contact Information</span>
-                  {!isEditing && (
-                    <button type="button" className="cvd-section-edit-btn" onClick={handleStartEdit}>
-                      <Edit2 size={12} />
-                      <span>Edit</span>
-                    </button>
-                  )}
                 </div>
 
                 {isEditing ? (
@@ -596,44 +727,209 @@ export default function ContactViewDrawer({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="form-group">
-                        <label className="form-label text-xs">
-                          Email Address <span className="text-danger">*</span>
+                    <div className="form-group">
+                      <label className="form-label text-xs">
+                        Email Address <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        className={`form-input form-input-sm ${touched.email && emailError ? 'input-error' : touched.email && !emailError ? 'input-valid' : ''}`}
+                        placeholder="sarah.c@apexlogistics.com"
+                        value={email}
+                        onChange={(e) => { setEmail(e.target.value); if (touched.email) setEmailError(validateEmail(e.target.value)) }}
+                        onBlur={() => { setTouched((t) => ({ ...t, email: true })); setEmailError(validateEmail(email)) }}
+                        autoComplete="email"
+                      />
+                      {touched.email && emailError && (
+                        <div className="field-error-msg">
+                          <AlertCircle size={12} />
+                          <span>{emailError}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── MULTIPLE PHONE NUMBERS ── */}
+                    <div className="form-group space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="form-label text-xs font-semibold text-gray-700 m-0">
+                          Phone Numbers
                         </label>
-                        <input
-                          type="email"
-                          required
-                          className={`form-input form-input-sm ${touched.email && emailError ? 'input-error' : touched.email && !emailError ? 'input-valid' : ''}`}
-                          placeholder="sarah.c@apexlogistics.com"
-                          value={email}
-                          onChange={(e) => { setEmail(e.target.value); if (touched.email) setEmailError(validateEmail(e.target.value)) }}
-                          onBlur={() => { setTouched((t) => ({ ...t, email: true })); setEmailError(validateEmail(email)) }}
-                          autoComplete="email"
-                        />
-                        {touched.email && emailError && (
-                          <div className="field-error-msg">
-                            <AlertCircle size={12} />
-                            <span>{emailError}</span>
-                          </div>
-                        )}
+                        <button
+                          type="button"
+                          onClick={handleAddPhoneNumber}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                        >
+                          <Plus size={13} />
+                          <span>Add Phone Number</span>
+                        </button>
                       </div>
-                      <div className="form-group">
-                        <label className="form-label text-xs">Phone Number</label>
-                        <PhoneInput
-                          dialCode={phoneCountryCode}
-                          number={phone}
-                          onDialCodeChange={(c) => { setPhoneCountryCode(c); if (touched.phone) setPhoneError(validatePhone(phone, c)) }}
-                          onNumberChange={(n) => { setPhone(n); if (touched.phone) setPhoneError(validatePhone(n, phoneCountryCode)) }}
-                          size="sm"
-                          showError={touched.phone}
-                          error={phoneError}
-                        />
+
+                      <div className="space-y-2.5 pt-1">
+                        {phoneNumbers.map((pItem, idx) => (
+                          <div
+                            key={idx}
+                            className={`p-3 rounded-xl border space-y-2.5 relative transition-all ${
+                              pItem.is_primary
+                                ? 'bg-blue-50/40 border-blue-200 shadow-2xs'
+                                : 'bg-slate-50/80 border-slate-200/90'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {/* Type Dropdown */}
+                              <select
+                                className="form-select form-input-sm shrink-0 text-xs font-medium rounded-md border-slate-300"
+                                style={{ width: '105px', minWidth: '105px', flexShrink: 0 }}
+                                value={pItem.type || 'Mobile'}
+                                onChange={(e) => handlePhoneTypeChange(idx, e.target.value)}
+                              >
+                                <option value="Mobile">Mobile</option>
+                                <option value="Work">Work</option>
+                                <option value="Personal">Personal</option>
+                                <option value="Other">Other</option>
+                              </select>
+
+                              {/* Phone Input */}
+                              <div className="flex-1 min-w-0">
+                                <PhoneInput
+                                  dialCode={pItem.country_code}
+                                  number={pItem.number}
+                                  onDialCodeChange={(code) => handlePhoneCountryCodeChange(idx, code)}
+                                  onNumberChange={(num) => handlePhoneNumberChange(idx, num)}
+                                  size="sm"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/60 text-xs flex-wrap">
+                              <div className="flex items-center gap-2">
+                                {/* Primary Radio Pill */}
+                                <label className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer transition-all select-none ${
+                                  pItem.is_primary
+                                    ? 'bg-blue-100/80 text-blue-700 border border-blue-300 font-semibold'
+                                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                }`}>
+                                  <input
+                                    type="radio"
+                                    name="primary_phone_select_drawer"
+                                    checked={pItem.is_primary}
+                                    onChange={() => handleSetPrimaryPhone(idx)}
+                                    className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                                  />
+                                  <Star size={13} className={pItem.is_primary ? 'text-blue-600 fill-blue-600' : 'text-slate-400'} />
+                                  <span>Primary</span>
+                                </label>
+
+                                {/* WhatsApp Checkbox Pill */}
+                                <label className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer transition-all select-none ${
+                                  pItem.is_whatsapp
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-300/80 shadow-2xs font-semibold'
+                                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                }`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={pItem.is_whatsapp}
+                                    onChange={(e) => handlePhoneWhatsAppChange(idx, e.target.checked)}
+                                    className="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5"
+                                  />
+                                  <MessageCircle size={13} className={pItem.is_whatsapp ? 'text-emerald-600 fill-emerald-600/20' : 'text-slate-400'} />
+                                  <span>WhatsApp</span>
+                                </label>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {/* Notes input */}
+                                <input
+                                  type="text"
+                                  className="form-input form-input-sm text-xs py-0.5 px-2 w-36 sm:w-44 bg-white border-slate-200"
+                                  placeholder="Note (e.g. Executive Hotline)"
+                                  value={pItem.notes || ''}
+                                  onChange={(e) => handlePhoneNotesChange(idx, e.target.value)}
+                                />
+
+                                {/* Delete Row button */}
+                                {phoneNumbers.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemovePhoneNumber(idx)}
+                                    className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600 hover:bg-rose-50 px-2 py-1 rounded transition-colors"
+                                    title="Remove phone number"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ── WEBSITES & SOCIAL MEDIA ── */}
+                    <div className="form-group space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="form-label text-xs font-semibold text-gray-700 m-0">
+                          Websites & Social Media
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleAddSite}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                        >
+                          <Plus size={13} />
+                          <span>Add Link</span>
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 pt-0.5">
+                        {sites.map((sItem, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2 rounded-xl border border-slate-200/90 bg-slate-50/80 flex items-center gap-2"
+                          >
+                            {/* Type Dropdown (mapped to name property) */}
+                            <select
+                              className="form-select form-input-sm shrink-0 text-xs font-medium rounded-md border-slate-300"
+                              style={{ width: '115px', minWidth: '115px', flexShrink: 0 }}
+                              value={sItem.name || 'Website'}
+                              onChange={(e) => handleSiteNameChange(idx, e.target.value)}
+                            >
+                              <option value="Website">Website</option>
+                              <option value="Facebook">Facebook</option>
+                              <option value="Instagram">Instagram</option>
+                              <option value="LinkedIn">LinkedIn</option>
+                              <option value="Twitter / X">Twitter / X</option>
+                              <option value="YouTube">YouTube</option>
+                              <option value="Other">Other</option>
+                            </select>
+
+                            {/* URL Input */}
+                            <input
+                              type="url"
+                              className="form-input form-input-sm flex-1 min-w-0 text-xs bg-white"
+                              placeholder="https://facebook.com/user or URL..."
+                              value={sItem.url}
+                              onChange={(e) => handleSiteUrlChange(idx, e.target.value)}
+                            />
+
+                            {/* Delete Row button */}
+                            {sites.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSite(idx)}
+                                className="inline-flex items-center justify-center p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors shrink-0"
+                                title="Remove link"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label text-xs">Street Address</label>
+                      <label className="form-label text-xs">Address</label>
                       <input
                         type="text"
                         className="form-input form-input-sm"
@@ -643,36 +939,14 @@ export default function ContactViewDrawer({
                       />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="form-group">
-                        <label className="form-label text-xs">State / Province</label>
-                        <select
-                          className="form-select form-input-sm"
-                          value={state}
-                          onChange={(e) => setState(e.target.value)}
-                        >
-                          {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label text-xs">Country</label>
-                        <select
-                          className="form-select form-input-sm"
-                          value={country}
-                          onChange={(e) => setCountry(e.target.value)}
-                        >
-                          {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label text-xs">Date of Birth</label>
-                        <input
-                          type="date"
-                          className="form-input form-input-sm"
-                          value={dateOfBirth}
-                          onChange={(e) => setDateOfBirth(e.target.value)}
-                        />
-                      </div>
+                    <div className="form-group">
+                      <label className="form-label text-xs">Date of Birth</label>
+                      <input
+                        type="date"
+                        className="form-input form-input-sm"
+                        value={dateOfBirth}
+                        onChange={(e) => setDateOfBirth(e.target.value)}
+                      />
                     </div>
 
                     <div className="form-group">
@@ -702,10 +976,104 @@ export default function ContactViewDrawer({
                         <a href={`mailto:${localContact.email}`} className="link-primary">{localContact.email}</a>
                       </div>
                     </div>
-                    <div className="cvd-info-row">
-                      <div className="cvd-info-label"><Phone size={15} /><span>Phone</span></div>
-                      <div className="cvd-info-value">
-                        {localContact.phone || (localContact.primary_phone_number?.phone_number ?? '—')}
+                    <div className="cvd-info-row cvd-info-row-top">
+                      <div className="cvd-info-label"><Phone size={15} /><span>Phone Numbers</span></div>
+                      <div className="cvd-info-value space-y-2">
+                        {((localContact.phone_numbers && localContact.phone_numbers.length > 0)
+                          ? localContact.phone_numbers
+                          : localContact.phone
+                          ? [{ phone_number: localContact.phone, type: 'Mobile', is_primary: true, is_whatsapp: false }]
+                          : []
+                        ).map((p, idx) => {
+                          const fullNum = p.phone_number ? (p.country_code ? `${p.country_code} ${p.phone_number}` : p.phone_number) : `${p.country_code || ''} ${p.number || ''}`.trim()
+                          const rawDigits = fullNum.replace(/[^0-9]/g, '')
+                          return (
+                            <div key={idx} className="space-y-0.5 pb-0.5">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <a
+                                  href={`tel:${fullNum}`}
+                                  className="link-primary font-semibold text-[13.5px] text-blue-600 hover:text-blue-700 transition-colors"
+                                >
+                                  {fullNum || '—'}
+                                </a>
+
+                                {/* Primary Badge */}
+                                {p.is_primary && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                    <Star size={10} className="text-blue-600 fill-blue-600" />
+                                    <span>Primary</span>
+                                  </span>
+                                )}
+
+                                {/* Type Badge */}
+                                {p.type && (
+                                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                    {p.type}
+                                  </span>
+                                )}
+
+                                {/* WhatsApp Badge */}
+                                {p.is_whatsapp && (
+                                  <a
+                                    href={`https://wa.me/${rawDigits}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title="Open WhatsApp Chat"
+                                    className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                                  >
+                                    <MessageCircle size={12} className="text-emerald-600 fill-emerald-600/20" />
+                                    <span>WhatsApp</span>
+                                  </a>
+                                )}
+                              </div>
+
+                              {/* Notes */}
+                              {p.notes && (
+                                <div className="text-xs text-slate-400 italic font-normal pl-0.5">
+                                  ({p.notes})
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                        {!(localContact.phone_numbers && localContact.phone_numbers.length > 0) && !localContact.phone && (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="cvd-info-row cvd-info-row-top">
+                      <div className="cvd-info-label"><Globe size={15} /><span>Websites & Links</span></div>
+                      <div className="cvd-info-value space-y-1.5">
+                        {((sites && sites.length > 0 && sites.some((s) => s.url))
+                          ? sites.filter((s) => s.url.trim() !== '')
+                          : localContact.sites && localContact.sites.length > 0
+                          ? localContact.sites.filter((s) => s.url)
+                          : (localContact.website || localContact.company_web)
+                          ? [{ name: 'Website', url: localContact.website || localContact.company_web }]
+                          : []
+                        ).map((st, idx) => {
+                          if (!st.url) return null
+                          const formattedUrl = st.url.startsWith('http') ? st.url : `https://${st.url}`
+                          return (
+                            <div key={idx} className="flex items-center gap-2 flex-wrap">
+                              <a
+                                href={formattedUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="link-primary inline-flex items-center gap-1.5 text-[13px] font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                              >
+                                <span>{st.name || 'Website'}</span>
+                                <ExternalLink size={11} className="text-blue-500" />
+                              </a>
+                              <span className="text-xs text-slate-400 truncate max-w-[240px]">
+                                ({st.url.replace(/^https?:\/\/(www\.)?/, '')})
+                              </span>
+                            </div>
+                          )
+                        })}
+                        {!(localContact.sites && localContact.sites.length > 0) && !localContact.website && !localContact.company_web && !sites.some((s) => s.url) && (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </div>
                     </div>
                     <div className="cvd-info-row">
@@ -737,9 +1105,7 @@ export default function ContactViewDrawer({
                     <div className="cvd-info-row">
                       <div className="cvd-info-label"><MapPin size={15} /><span>Address</span></div>
                       <div className="cvd-info-value">
-                        {localContact.address ||
-                          [localContact.state, localContact.country].filter(Boolean).join(', ') ||
-                          '—'}
+                        {localContact.address || localContact.country || '—'}
                       </div>
                     </div>
                     {(localContact.birthday || localContact.date_of_birth) && (

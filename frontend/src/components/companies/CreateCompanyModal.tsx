@@ -23,7 +23,6 @@ export default function CreateCompanyModal({
   const [website, setWebsite] = useState('')
   const [industry, setIndustry] = useState('')
   const [city, setCity] = useState('')
-  const [state, setState] = useState('')
   const [country, setCountry] = useState('Sri Lanka')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -57,7 +56,6 @@ export default function CreateCompanyModal({
         website: website.trim() || undefined,
         industry: industry.trim() || undefined,
         city: city.trim() || undefined,
-        state: state.trim() || undefined,
         country: country.trim() || undefined,
         status: 1,
       }
@@ -211,17 +209,6 @@ export default function CreateCompanyModal({
                 placeholder="e.g. CO000001 (Optional)"
                 value={companyCode}
                 onChange={(e) => setCompanyCode(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label text-xs">State / Province</label>
-              <input
-                type="text"
-                className="form-input form-input-sm"
-                placeholder="e.g. Western Province"
-                value={state}
-                onChange={(e) => setState(e.target.value)}
               />
             </div>
 
