@@ -47,9 +47,11 @@ async function request<T = any>(
 
   const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
 
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData
+
   const headers: Record<string, string> = {
     'Accept': 'application/json',
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string>),
   }
 
@@ -110,23 +112,26 @@ export const apiClient = {
   },
 
   post<T = any>(endpoint: string, body?: any): Promise<T> {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
     return request<T>(endpoint, {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
     })
   },
 
   put<T = any>(endpoint: string, body?: any): Promise<T> {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
     return request<T>(endpoint, {
       method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
     })
   },
 
   patch<T = any>(endpoint: string, body?: any): Promise<T> {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
     return request<T>(endpoint, {
       method: 'PATCH',
-      body: body ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
     })
   },
 

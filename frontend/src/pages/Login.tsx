@@ -12,6 +12,8 @@ import {
   Calendar,
   ShieldCheck,
   AlertCircle,
+  Info,
+  X,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 
@@ -26,6 +28,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
   const from = (location.state as any)?.from?.pathname || '/'
 
@@ -264,6 +267,30 @@ export default function Login() {
               </div>
             )}
 
+            {/* Info Message Alert */}
+            {infoMessage && (
+              <div
+                className="flex items-start gap-2.5 p-3 rounded-lg text-xs animate-fade-in mb-3"
+                style={{
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  color: '#1d4ed8',
+                }}
+              >
+                <Info size={15} className="flex-shrink-0 mt-0.5 text-blue-600" />
+                <div className="flex-1">
+                  <span>{infoMessage}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInfoMessage(null)}
+                  className="text-blue-400 hover:text-blue-700 ml-1"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="login-form">
               {/* Username / Email Input */}
               <div className="login-form-group">
@@ -333,7 +360,7 @@ export default function Login() {
                   className="login-forgot-link"
                   onClick={(e) => {
                     e.preventDefault()
-                    alert('Please contact your administrator to reset your password.')
+                    setInfoMessage('Please contact your administrator to reset your password.')
                   }}
                 >
                   Forgot password?
@@ -365,7 +392,7 @@ export default function Login() {
                 className="login-contact-link"
                 onClick={(e) => {
                   e.preventDefault()
-                  alert('Please contact your administrator for system account creation.')
+                  setInfoMessage('Please contact your administrator for system account creation.')
                 }}
               >
                 Contact your administrator

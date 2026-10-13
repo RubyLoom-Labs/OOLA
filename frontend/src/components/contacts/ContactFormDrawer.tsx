@@ -10,6 +10,7 @@ import {
   Trash2,
   MessageCircle,
   Star,
+  X,
 } from 'lucide-react'
 import type {
   Contact,
@@ -61,8 +62,11 @@ export default function ContactFormDrawer({
   ])
 
   // Validation errors
+  const [firstNameError, setFirstNameError] = useState<string | null>(null)
+  const [lastNameError, setLastNameError] = useState<string | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
-  const [touched, setTouched] = useState({ email: false })
+  const [formError, setFormError] = useState<string | null>(null)
+  const [touched, setTouched] = useState({ email: false, firstName: false, lastName: false })
 
   // Company Selection (ID and Name)
   const [companyId, setCompanyId] = useState<number | undefined>(undefined)
@@ -269,13 +273,27 @@ export default function ContactFormDrawer({
 
     const eErr = validateEmail(email)
     setEmailError(eErr)
-    setTouched({ email: true })
 
-    if (!firstName.trim() || !lastName.trim()) {
-      alert('Please fill in required fields: First Name and Last Name')
+    let hasError = false
+    if (!firstName.trim()) {
+      setFirstNameError('First name is required.')
+      hasError = true
+    } else {
+      setFirstNameError(null)
+    }
+
+    if (!lastName.trim()) {
+      setLastNameError('Last name is required.')
+      hasError = true
+    } else {
+      setLastNameError(null)
+    }
+
+    setTouched({ email: true, firstName: true, lastName: true })
+
+    if (hasError || eErr) {
       return
     }
-    if (eErr) return
 
     const validPhones = phoneNumbers.filter((p) => p.number.trim() !== '')
     const hasExplicitPrimary = validPhones.some((p) => p.is_primary)
@@ -326,11 +344,12 @@ export default function ContactFormDrawer({
     }
 
     setLoading(true)
+    setFormError(null)
     try {
       await onSubmit(payload, isEdit)
       onClose()
     } catch (error: any) {
-      alert(error?.message || 'Failed to save contact')
+      setFormError(error?.message || 'Failed to save contact')
     } finally {
       setLoading(false)
     }
@@ -355,6 +374,31 @@ export default function ContactFormDrawer({
       className="contact-form-drawer"
     >
       <form onSubmit={handleSubmit} className="contact-form-panel">
+        {/* Inline General Error Banner */}
+        {formError && (
+          <div
+            className="flex items-start gap-2.5 p-3 rounded-lg text-xs animate-fade-in mb-3 mx-4"
+            style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#dc2626',
+            }}
+          >
+            <AlertCircle size={15} className="flex-shrink-0 mt-0.5 text-red-600" />
+            <div className="flex-1">
+              <span className="font-semibold block">Failed to save contact:</span>
+              <span>{formError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormError(null)}
+              className="text-red-400 hover:text-red-700"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Profile Card / Avatar Bar */}
         <div className="contact-form-profile-bar">
           <div className="relative">
@@ -416,11 +460,24 @@ export default function ContactFormDrawer({
                   <input
                     type="text"
                     required
-                    className="form-input"
+                    className={`form-input ${firstNameError ? 'input-error' : touched.firstName ? 'input-valid' : ''}`}
                     placeholder="e.g. Sarah"
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    onChange={(e) => {
+                      setFirstName(e.target.value)
+                      if (firstNameError && e.target.value.trim()) setFirstNameError(null)
+                    }}
+                    onBlur={() => {
+                      setTouched((prev) => ({ ...prev, firstName: true }))
+                      if (!firstName.trim()) setFirstNameError('First name is required.')
+                    }}
                   />
+                  {firstNameError && (
+                    <div className="field-error-msg">
+                      <AlertCircle size={12} />
+                      <span>{firstNameError}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">
@@ -429,11 +486,24 @@ export default function ContactFormDrawer({
                   <input
                     type="text"
                     required
-                    className="form-input"
+                    className={`form-input ${lastNameError ? 'input-error' : touched.lastName ? 'input-valid' : ''}`}
                     placeholder="e.g. Connor"
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    onChange={(e) => {
+                      setLastName(e.target.value)
+                      if (lastNameError && e.target.value.trim()) setLastNameError(null)
+                    }}
+                    onBlur={() => {
+                      setTouched((prev) => ({ ...prev, lastName: true }))
+                      if (!lastName.trim()) setLastNameError('Last name is required.')
+                    }}
                   />
+                  {lastNameError && (
+                    <div className="field-error-msg">
+                      <AlertCircle size={12} />
+                      <span>{lastNameError}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

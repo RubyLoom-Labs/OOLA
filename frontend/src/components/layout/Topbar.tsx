@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Menu,
   Search,
@@ -17,6 +18,7 @@ interface TopbarProps {
 }
 
 export default function Topbar({ onMenuClick }: TopbarProps) {
+  const navigate = useNavigate()
   const { user, logout } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -195,7 +197,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                 className="dropdown-item"
                 onClick={() => {
                   setShowUserMenu(false)
-                  alert(`Logged in as: ${displayName} (${displayEmail})`)
+                  navigate('/settings')
                 }}
               >
                 <UserIcon size={14} />

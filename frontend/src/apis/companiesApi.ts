@@ -47,13 +47,29 @@ export interface CompanyLookupParams {
 
 export interface CreateCompanyPayload {
   company_name: string
-  company_code?: string
-  email?: string
+  company_type_id: number
+  email: string
+  phone_number?: string
   phone?: string
+  phone_numbers?: Array<{
+    id?: number
+    phone_number: string
+    type?: string
+    is_primary?: boolean
+    is_whatsapp?: boolean
+    notes?: string
+  }>
   website?: string
   industry?: string
+  company_description?: string
+  logo?: File | string | null
+  owner_name?: string
+  owner_birthday?: string
+  address_line_1?: string
+  address_line_2?: string
   city?: string
   state?: string
+  postal_code?: string
   country?: string
   company_type_id?: number
   company_size_id?: number
@@ -99,7 +115,7 @@ export const companiesApi = {
    * POST /api/v1/companies
    * Create new company
    */
-  async createCompany(payload: CreateCompanyPayload): Promise<ApiResponse<CompanyDetails | CompanyLookupItem>> {
+  async createCompany(payload: CreateCompanyPayload | FormData): Promise<ApiResponse<CompanyDetails | CompanyLookupItem>> {
     return await apiClient.post<ApiResponse<CompanyDetails | CompanyLookupItem>>('/companies', payload)
   },
 

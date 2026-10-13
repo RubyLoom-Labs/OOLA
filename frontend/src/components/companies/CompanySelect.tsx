@@ -285,6 +285,7 @@ export default function CompanySelect({
             type="button"
             onClick={(e) => {
               e.stopPropagation()
+              setIsOpen(false)
               setIsCreateModalOpen(true)
             }}
             className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 mb-1 text-xs font-semibold text-primary-600 bg-primary-50/70 hover:bg-primary-50 rounded-md transition-colors border border-dashed border-primary-200"
@@ -310,6 +311,7 @@ export default function CompanySelect({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
+                    setIsOpen(false)
                     setIsCreateModalOpen(true)
                   }}
                   className="mt-2 text-primary-600 font-semibold hover:underline inline-flex items-center gap-1"
