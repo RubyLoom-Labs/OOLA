@@ -25,6 +25,7 @@ class WhatsappTemplateController extends Controller
         ]);
 
         $template = WhatsappTemplate::create($validated);
+
         return response()->json($template, 201);
     }
 }

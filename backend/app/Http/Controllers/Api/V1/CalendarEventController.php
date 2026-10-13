@@ -18,6 +18,7 @@ class CalendarEventController extends Controller
         if ($request->has('start_date') && $request->has('end_date')) {
             $query->whereBetween('start_time', [$request->start_date, $request->end_date]);
         }
+
         return CalendarEventResource::collection($query->orderBy('start_time', 'asc')->get());
     }
 
@@ -27,6 +28,7 @@ class CalendarEventController extends Controller
         $data['user_id'] = $request->user()->id;
 
         $event = CalendarEvent::create($data);
+
         return (new CalendarEventResource($event->load(['customer', 'lead', 'project'])))
             ->response()
             ->setStatusCode(201);
@@ -40,12 +42,14 @@ class CalendarEventController extends Controller
     public function update(Request $request, CalendarEvent $calendarEvent): CalendarEventResource
     {
         $calendarEvent->update($request->all());
+
         return new CalendarEventResource($calendarEvent->load(['customer', 'lead', 'project']));
     }
 
     public function destroy(CalendarEvent $calendarEvent): JsonResponse
     {
         $calendarEvent->logicalDelete();
+
         return response()->json(['message' => 'Event deleted successfully.']);
     }
 }

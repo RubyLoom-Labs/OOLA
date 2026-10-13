@@ -17,6 +17,7 @@ class TaskTimeEntryController extends Controller
     public function active(Request $request): JsonResponse
     {
         $active = $this->service->getActiveTimer($request->user());
+
         return response()->json([
             'active_timer' => $active ? new TaskTimeEntryResource($active) : null,
             'data' => $active ? new TaskTimeEntryResource($active) : null,
@@ -34,7 +35,7 @@ class TaskTimeEntryController extends Controller
             'data' => [
                 'id' => $entry->id,
                 'task_id' => $task->id,
-                'is_running' => (bool)$entry->is_running,
+                'is_running' => (bool) $entry->is_running,
                 'started_at' => $entry->started_at?->toISOString(),
             ],
         ]);

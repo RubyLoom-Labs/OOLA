@@ -5,13 +5,12 @@ namespace App\Actions\Quotation;
 use App\Models\ActivityLog;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
-use Illuminate\Support\Str;
 
 class CreateQuotationAction
 {
     public function execute(array $data): Quotation
     {
-        $quotationNumber = 'QUO-' . date('Y') . '-' . rand(1000, 9999);
+        $quotationNumber = 'QUO-'.date('Y').'-'.rand(1000, 9999);
         $data['quotation_number'] = $data['quotation_number'] ?? $quotationNumber;
 
         $itemsData = $data['items'] ?? [];
@@ -48,7 +47,7 @@ class CreateQuotationAction
         if (($quotation->discount_type ?? 'percentage') === 'percentage') {
             $quotation->discount_amount = ($subtotal * ($quotation->discount_value ?? 0)) / 100;
         } else {
-            $quotation->discount_amount = min($subtotal, (float)($quotation->discount_value ?? 0));
+            $quotation->discount_amount = min($subtotal, (float) ($quotation->discount_value ?? 0));
         }
 
         $taxable = max(0, $subtotal - $quotation->discount_amount);
@@ -58,7 +57,7 @@ class CreateQuotationAction
 
         ActivityLog::log(
             action: 'Quotation Created',
-            description: "Quotation #{$quotation->quotation_number} generated for total {$quotation->currency} " . number_format($quotation->total_amount, 2),
+            description: "Quotation #{$quotation->quotation_number} generated for total {$quotation->currency} ".number_format($quotation->total_amount, 2),
             subject: $quotation
         );
 

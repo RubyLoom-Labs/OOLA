@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
-            
+
             $table->boolean('is_delete')->default(false)->index();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -41,7 +41,7 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('department_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('designation_id')->nullable()->constrained()->nullOnDelete();
-            
+
             $table->string('first_name');
             $table->string('last_name')->nullable();
             $table->string('email')->nullable();

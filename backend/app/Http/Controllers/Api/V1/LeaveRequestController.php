@@ -18,7 +18,8 @@ class LeaveRequestController extends Controller
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
-        return response()->json($query->latest()->paginate((int)$request->get('per_page', 15)));
+
+        return response()->json($query->latest()->paginate((int) $request->get('per_page', 15)));
     }
 
     public function store(Request $request): JsonResponse
@@ -32,6 +33,7 @@ class LeaveRequestController extends Controller
         ]);
 
         $leave = LeaveRequest::create($validated);
+
         return response()->json($leave, 201);
     }
 
@@ -42,6 +44,7 @@ class LeaveRequestController extends Controller
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
         ]);
+
         return response()->json(['message' => 'Leave approved.', 'leave' => $leaveRequest]);
     }
 
@@ -52,6 +55,7 @@ class LeaveRequestController extends Controller
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
         ]);
+
         return response()->json(['message' => 'Leave rejected.', 'leave' => $leaveRequest]);
     }
 }

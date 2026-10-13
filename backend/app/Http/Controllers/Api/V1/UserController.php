@@ -15,6 +15,7 @@ class UserController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $users = User::with('roles')->where('status', 'Active')->get();
+
         return UserResource::collection($users);
     }
 
@@ -34,7 +35,7 @@ class UserController extends Controller
         $validated['password'] = Hash::make($validated['password']);
         $user = User::create($validated);
 
-        if (!empty($validated['role_ids'])) {
+        if (! empty($validated['role_ids'])) {
             $user->roles()->sync($validated['role_ids']);
         }
 
@@ -70,6 +71,7 @@ class UserController extends Controller
     public function destroy(User $user): JsonResponse
     {
         $user->logicalDelete();
+
         return response()->json(['message' => 'User deactivated.']);
     }
 }

@@ -22,6 +22,7 @@ class DesignationController extends Controller
             'description' => ['nullable', 'string'],
         ]);
         $designation = Designation::create($validated);
+
         return response()->json($designation, 201);
     }
 }

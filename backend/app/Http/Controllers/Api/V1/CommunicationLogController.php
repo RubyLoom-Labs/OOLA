@@ -15,7 +15,8 @@ class CommunicationLogController extends Controller
         if ($request->has('channel')) {
             $query->where('channel', $request->channel);
         }
-        return response()->json($query->latest()->paginate((int)$request->get('per_page', 15)));
+
+        return response()->json($query->latest()->paginate((int) $request->get('per_page', 15)));
     }
 
     public function store(Request $request): JsonResponse
@@ -30,9 +31,10 @@ class CommunicationLogController extends Controller
 
         $validated['status'] = 'sent';
         $validated['sent_at'] = now();
-        $validated['external_message_id'] = 'EXT-' . strtoupper(uniqid());
+        $validated['external_message_id'] = 'EXT-'.strtoupper(uniqid());
 
         $log = CommunicationLog::create($validated);
+
         return response()->json($log, 201);
     }
 }

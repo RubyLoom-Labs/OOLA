@@ -23,6 +23,7 @@ class SubtaskController extends Controller
         ]);
 
         $subtask = Subtask::create($validated);
+
         return (new SubtaskResource($subtask->load('assignedUser')))->response()->setStatusCode(201);
     }
 
@@ -39,20 +40,23 @@ class SubtaskController extends Controller
         ]);
 
         $subtask->update($validated);
+
         return new SubtaskResource($subtask->load('assignedUser'));
     }
 
     public function toggle(Subtask $subtask): SubtaskResource
     {
-        $subtask->is_completed = !$subtask->is_completed;
+        $subtask->is_completed = ! $subtask->is_completed;
         $subtask->stage = $subtask->is_completed ? 'Completed' : 'To Do';
         $subtask->save();
+
         return new SubtaskResource($subtask);
     }
 
     public function destroy(Subtask $subtask): JsonResponse
     {
         $subtask->logicalDelete();
+
         return response()->json(['message' => 'Subtask deleted successfully.']);
     }
 }

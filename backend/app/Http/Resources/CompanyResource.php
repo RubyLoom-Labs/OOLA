@@ -11,7 +11,7 @@ class CompanyResource extends JsonResource
     public function toArray(Request $request): array
     {
         $logoUrl = null;
-        if (!empty($this->logo)) {
+        if (! empty($this->logo)) {
             $logoUrl = filter_var($this->logo, FILTER_VALIDATE_URL) ? $this->logo : Storage::disk('public')->url($this->logo);
         }
 
@@ -22,6 +22,7 @@ class CompanyResource extends JsonResource
             'company_type_id' => $this->company_type_id,
             'company_type' => new CompanyTypeResource($this->whenLoaded('companyType')),
             'email' => $this->email,
+            'phone_number' => $this->phone_number,
             'industry' => $this->industry,
             'company_size_id' => $this->company_size_id,
             'company_size' => new CompanySizeResource($this->whenLoaded('companySize')),
@@ -38,8 +39,6 @@ class CompanyResource extends JsonResource
             'state' => $this->state,
             'postal_code' => $this->postal_code,
             'country' => $this->country,
-            'phone_numbers' => ContactPhoneNumberResource::collection($this->whenLoaded('phoneNumbers')),
-            'primary_phone_number' => new ContactPhoneNumberResource($this->whenLoaded('primaryPhoneNumber')),
             'contacts' => ContactResource::collection($this->whenLoaded('contacts')),
             'contacts_count' => $this->when(isset($this->contacts_count), $this->contacts_count),
             'leads_count' => $this->when(isset($this->leads_count), $this->leads_count),

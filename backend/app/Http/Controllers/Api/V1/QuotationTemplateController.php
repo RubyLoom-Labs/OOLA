@@ -24,6 +24,7 @@ class QuotationTemplateController extends Controller
         ]);
 
         $template = QuotationTemplate::create($validated);
+
         return response()->json($template, 201);
     }
 }

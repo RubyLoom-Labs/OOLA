@@ -23,7 +23,7 @@ class EmployeeResource extends JsonResource
             'email' => $this->email,
             'phone' => $this->phone,
             'joining_date' => $this->joining_date?->format('Y-m-d'),
-            'salary' => (float)$this->salary,
+            'salary' => (float) $this->salary,
             'skills' => $this->skills,
             'status' => $this->status,
             'created_at' => $this->created_at?->toISOString(),

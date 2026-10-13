@@ -20,7 +20,7 @@ class StopTimeTrackingAction
         if ($runningEntry) {
             $endedAt = now();
             $duration = $endedAt->diffInSeconds($runningEntry->started_at);
-            
+
             $runningEntry->update([
                 'ended_at' => $endedAt,
                 'duration_seconds' => $duration,

@@ -55,7 +55,7 @@ class StoreTaskRequest extends FormRequest
                 if ($lead) {
                     $allowedUserIds = $lead->users()->pluck('users.id')->toArray();
                     foreach ($userIds as $uid) {
-                        if (!in_array((int)$uid, $allowedUserIds, true)) {
+                        if (! in_array((int) $uid, $allowedUserIds, true)) {
                             $v->errors()->add('user_ids', "User ID {$uid} must first be added as a member to this Lead before assigning tasks (PRD Rule #25).");
                         }
                     }
@@ -68,7 +68,7 @@ class StoreTaskRequest extends FormRequest
                         $allowedUserIds[] = $project->project_manager_id;
                     }
                     foreach ($userIds as $uid) {
-                        if (!in_array((int)$uid, $allowedUserIds, true)) {
+                        if (! in_array((int) $uid, $allowedUserIds, true)) {
                             $v->errors()->add('user_ids', "User ID {$uid} must first be added as a member to this Project before assigning tasks (PRD Rule #25).");
                         }
                     }

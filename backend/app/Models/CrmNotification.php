@@ -32,6 +32,7 @@ class CrmNotification extends BaseModel
     {
         $this->is_read = true;
         $this->read_at = now();
+
         return $this->save();
     }
 }

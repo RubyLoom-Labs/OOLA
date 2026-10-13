@@ -15,7 +15,7 @@ class CrmNotificationController extends Controller
     {
         $notifications = CrmNotification::where('user_id', $request->user()->id)
             ->latest()
-            ->paginate((int)$request->get('per_page', 20));
+            ->paginate((int) $request->get('per_page', 20));
 
         return CrmNotificationResource::collection($notifications);
     }
@@ -36,6 +36,7 @@ class CrmNotificationController extends Controller
         }
 
         $crmNotification->update(['is_read' => true, 'read_at' => now()]);
+
         return response()->json(['message' => 'Notification marked as read.']);
     }
 

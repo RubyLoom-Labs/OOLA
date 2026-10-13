@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('domain_name');
             $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
             $table->foreignId('contact_id')->nullable()->constrained()->nullOnDelete();
-            
+
             $table->string('provider')->nullable(); // GoDaddy, Namecheap, Cloudflare, etc.
             $table->date('purchase_date')->nullable();
             $table->decimal('cost_price', 15, 2)->default(0);
@@ -42,7 +42,7 @@ return new class extends Migration
             $table->string('provider')->nullable(); // AWS, DigitalOcean, Hetzner, Linode
             $table->string('ip_address')->nullable();
             $table->string('plan')->nullable();
-            
+
             $table->date('purchase_date')->nullable();
             $table->decimal('cost_price', 15, 2)->default(0);
             $table->decimal('selling_price', 15, 2)->default(0);

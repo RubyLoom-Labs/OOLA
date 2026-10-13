@@ -35,7 +35,7 @@ return new class extends Migration
             $table->string('lead_title');
             $table->string('requirement_name')->nullable();
             $table->longText('requirement_details')->nullable();
-            
+
             $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('contact_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('lead_source_id')->nullable()->constrained('lead_sources')->nullOnDelete();
@@ -47,7 +47,7 @@ return new class extends Migration
             $table->string('status')->default('Active'); // Active, Won, Lost, Converted
             $table->string('next_step')->nullable();
             $table->date('expected_closing_date')->nullable();
-            
+
             // Lost analysis
             $table->string('lost_reason')->nullable();
             $table->text('lost_note')->nullable();

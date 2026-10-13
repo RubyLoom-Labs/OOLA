@@ -13,18 +13,18 @@ class QuotationService
     {
         $query = Quotation::with(['customer', 'project', 'lead', 'template', 'items']);
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('quotation_number', 'like', "%{$search}%")
-                  ->orWhere('title', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function ($cq) use ($search) {
-                      $cq->where('company_name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('title', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($cq) use ($search) {
+                        $cq->where('company_name', 'like', "%{$search}%");
+                    });
             });
         }
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
@@ -35,7 +35,7 @@ class QuotationService
     {
         return DB::transaction(function () use ($data, $items) {
             if (empty($data['quotation_number'])) {
-                $data['quotation_number'] = 'QUO-' . date('Y') . '-' . strtoupper(substr(uniqid(), -4));
+                $data['quotation_number'] = 'QUO-'.date('Y').'-'.strtoupper(substr(uniqid(), -4));
             }
 
             // Calculate totals
@@ -106,8 +106,8 @@ class QuotationService
     {
         $subtotal = 0;
         foreach ($items as $item) {
-            $qty = (float)($item['quantity'] ?? 1);
-            $price = (float)($item['unit_price'] ?? 0);
+            $qty = (float) ($item['quantity'] ?? 1);
+            $price = (float) ($item['unit_price'] ?? 0);
             $subtotal += ($qty * $price);
         }
 

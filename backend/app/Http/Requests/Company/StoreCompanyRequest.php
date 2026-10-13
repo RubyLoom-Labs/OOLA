@@ -17,6 +17,7 @@ class StoreCompanyRequest extends FormRequest
             'company_name' => ['required', 'string', 'max:255'],
             'company_type_id' => ['required', 'integer', 'exists:company_types,id'],
             'email' => ['required', 'email', 'max:255'],
+            'phone_number' => ['nullable', 'string', 'max:50'],
             'industry' => ['nullable', 'string', 'max:100'],
             'company_size_id' => ['nullable', 'integer', 'exists:company_sizes,id'],
             'status' => ['nullable', 'boolean'],
@@ -31,15 +32,6 @@ class StoreCompanyRequest extends FormRequest
             'state' => ['nullable', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:50'],
             'country' => ['nullable', 'string', 'max:100'],
-            
-            // Multiple contact numbers
-            'phone_numbers' => ['nullable', 'array'],
-            'phone_numbers.*.id' => ['nullable', 'integer'],
-            'phone_numbers.*.phone_number' => ['nullable', 'string', 'max:50'],
-            'phone_numbers.*.type' => ['nullable', 'string', 'max:50'],
-            'phone_numbers.*.is_primary' => ['nullable', 'boolean'],
-            'phone_numbers.*.is_whatsapp' => ['nullable', 'boolean'],
-            'phone_numbers.*.notes' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

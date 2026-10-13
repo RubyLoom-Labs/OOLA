@@ -20,7 +20,8 @@ class HostingDomainController extends Controller
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
-        return HostingDomainResource::collection($query->latest()->paginate((int)$request->get('per_page', 15)));
+
+        return HostingDomainResource::collection($query->latest()->paginate((int) $request->get('per_page', 15)));
     }
 
     public function store(Request $request): JsonResponse
@@ -39,6 +40,7 @@ class HostingDomainController extends Controller
         ]);
 
         $domain = HostingDomain::create($validated);
+
         return (new HostingDomainResource($domain->load('customer')))->response()->setStatusCode(201);
     }
 
@@ -50,12 +52,14 @@ class HostingDomainController extends Controller
     public function update(Request $request, HostingDomain $hostingDomain): HostingDomainResource
     {
         $hostingDomain->update($request->all());
+
         return new HostingDomainResource($hostingDomain->load('customer'));
     }
 
     public function destroy(HostingDomain $hostingDomain): JsonResponse
     {
         $hostingDomain->logicalDelete();
+
         return response()->json(['message' => 'Domain archived.']);
     }
 }

@@ -7,13 +7,9 @@ use App\Http\Requests\Company\StoreCompanyRequest;
 use App\Http\Requests\Company\UpdateCompanyRequest;
 use App\Http\Resources\CompanyResource;
 use App\Models\Company;
-use App\Models\Contact;
-use App\Models\ContactPhoneNumber;
-use App\Models\Customer;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CompanyController extends Controller
@@ -23,7 +19,7 @@ class CompanyController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Company::with(['companyType', 'companySize', 'phoneNumbers', 'primaryPhoneNumber'])
+        $query = Company::with(['companyType', 'companySize'])
             ->withCount(['contacts', 'leads', 'projects']);
 
         // Filter by status (boolean or 1/0)
@@ -53,12 +49,10 @@ class CompanyController extends Controller
                 $q->where('company_name', 'like', "%{$search}%")
                     ->orWhere('company_code', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone_number', 'like', "%{$search}%")
                     ->orWhere('owner_name', 'like', "%{$search}%")
                     ->orWhere('city', 'like', "%{$search}%")
-                    ->orWhere('industry', 'like', "%{$search}%")
-                    ->orWhereHas('phoneNumbers', function ($pq) use ($search) {
-                        $pq->where('phone_number', 'like', "%{$search}%");
-                    });
+                    ->orWhere('industry', 'like', "%{$search}%");
             });
         }
 
@@ -68,6 +62,7 @@ class CompanyController extends Controller
             'company_code',
             'company_name',
             'email',
+            'phone_number',
             'status',
             'created_at',
             'updated_at',
@@ -169,22 +164,13 @@ class CompanyController extends Controller
             $validated['logo'] = $path;
         }
 
-        return DB::transaction(function () use ($validated) {
-            $phoneNumbers = $validated['phone_numbers'] ?? [];
-            unset($validated['phone_numbers']);
+        $company = Company::create($validated);
 
-            $company = Company::create($validated);
+        ActivityLogger::log('Company Created', "Created company: {$company->company_name} ({$company->company_code})", $company);
 
-            if (! empty($phoneNumbers)) {
-                $this->syncPhoneNumbers($company, $phoneNumbers);
-            }
-
-            ActivityLogger::log('Company Created', "Created company: {$company->company_name} ({$company->company_code})", $company);
-
-            return (new CompanyResource($company->load(['companyType', 'companySize', 'phoneNumbers', 'primaryPhoneNumber'])))
-                ->response()
-                ->setStatusCode(201);
-        });
+        return (new CompanyResource($company->load(['companyType', 'companySize'])))
+            ->response()
+            ->setStatusCode(201);
     }
 
     /**
@@ -192,7 +178,7 @@ class CompanyController extends Controller
      */
     public function show(Company $company): CompanyResource
     {
-        return new CompanyResource($company->load(['companyType', 'companySize', 'phoneNumbers', 'primaryPhoneNumber', 'contacts']));
+        return new CompanyResource($company->load(['companyType', 'companySize', 'contacts']));
     }
 
     /**
@@ -210,23 +196,11 @@ class CompanyController extends Controller
             $validated['logo'] = $path;
         }
 
-        return DB::transaction(function () use ($company, $validated) {
-            $phoneNumbers = null;
-            if (array_key_exists('phone_numbers', $validated)) {
-                $phoneNumbers = $validated['phone_numbers'];
-                unset($validated['phone_numbers']);
-            }
+        $company->update($validated);
 
-            $company->update($validated);
+        ActivityLogger::log('Company Updated', "Updated company: {$company->company_name} ({$company->company_code})", $company);
 
-            if ($phoneNumbers !== null) {
-                $this->syncPhoneNumbers($company, $phoneNumbers);
-            }
-
-            ActivityLogger::log('Company Updated', "Updated company: {$company->company_name} ({$company->company_code})", $company);
-
-            return new CompanyResource($company->load(['companyType', 'companySize', 'phoneNumbers', 'primaryPhoneNumber', 'contacts']));
-        });
+        return new CompanyResource($company->load(['companyType', 'companySize', 'contacts']));
     }
 
     /**
@@ -251,90 +225,7 @@ class CompanyController extends Controller
 
         return response()->json([
             'message' => 'Company restored successfully.',
-            'data' => new CompanyResource($company->load(['companyType', 'companySize', 'phoneNumbers', 'primaryPhoneNumber'])),
+            'data' => new CompanyResource($company->load(['companyType', 'companySize'])),
         ]);
-    }
-
-    /**
-     * Sync multiple phone numbers for a company.
-     */
-    protected function syncPhoneNumbers(Company $company, array $phoneNumbers): void
-    {
-        Customer::firstOrCreate(
-            ['id' => $company->id],
-            [
-                'customer_code' => 'CUST-COMP-'.$company->id,
-                'company_name' => $company->company_name,
-                'email' => $company->email,
-                'status' => 'Active',
-            ]
-        );
-
-        $contact = $company->contacts()->first();
-        if (! $contact) {
-            $contact = Contact::create([
-                'company_id' => $company->id,
-                'company' => $company->company_name,
-                'first_name' => $company->owner_name ?? 'Primary',
-                'last_name' => 'Contact',
-                'email' => $company->email,
-            ]);
-        }
-
-        $existingIds = [];
-        $hasPrimary = false;
-
-        foreach ($phoneNumbers as $idx => $item) {
-            $phoneNumber = is_array($item) ? ($item['phone_number'] ?? null) : $item;
-            if (empty($phoneNumber)) {
-                continue;
-            }
-
-            $type = is_array($item) ? ($item['type'] ?? 'Work') : 'Work';
-            $isPrimary = is_array($item) ? (bool) ($item['is_primary'] ?? ($idx === 0)) : ($idx === 0);
-            $isWhatsapp = is_array($item) ? (bool) ($item['is_whatsapp'] ?? false) : false;
-            $notes = is_array($item) ? ($item['notes'] ?? null) : null;
-            $id = is_array($item) ? ($item['id'] ?? null) : null;
-
-            if ($isPrimary && ! $hasPrimary) {
-                $hasPrimary = true;
-            } elseif ($isPrimary && $hasPrimary) {
-                $isPrimary = false;
-            }
-
-            if ($id) {
-                $record = ContactPhoneNumber::where('id', $id)->where('contact_id', $contact->id)->first();
-                if ($record) {
-                    $record->update([
-                        'phone_number' => $phoneNumber,
-                        'type' => $type,
-                        'is_primary' => $isPrimary,
-                        'is_whatsapp' => $isWhatsapp,
-                        'notes' => $notes,
-                        'is_delete' => false,
-                    ]);
-                    $existingIds[] = $record->id;
-
-                    continue;
-                }
-            }
-
-            $record = ContactPhoneNumber::create([
-                'contact_id' => $contact->id,
-                'phone_number' => $phoneNumber,
-                'type' => $type,
-                'is_primary' => $isPrimary,
-                'is_whatsapp' => $isWhatsapp,
-                'notes' => $notes,
-            ]);
-            $existingIds[] = $record->id;
-        }
-
-        ContactPhoneNumber::where('contact_id', $contact->id)
-            ->whereNotIn('id', $existingIds)
-            ->update([
-                'is_delete' => true,
-                'deleted_at' => now(),
-            ]);
     }
 }

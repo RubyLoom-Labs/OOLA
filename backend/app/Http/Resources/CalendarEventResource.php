@@ -16,7 +16,7 @@ class CalendarEventResource extends JsonResource
             'start_time' => $this->start_time?->toISOString(),
             'end_time' => $this->end_time?->toISOString(),
             'event_type' => $this->event_type,
-            'is_all_day' => (bool)$this->is_all_day,
+            'is_all_day' => (bool) $this->is_all_day,
             'location' => $this->location,
             'reminder_before_minutes' => $this->reminder_before_minutes,
             'user_id' => $this->user_id,

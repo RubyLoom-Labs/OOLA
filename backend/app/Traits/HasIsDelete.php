@@ -51,7 +51,7 @@ trait HasIsDelete
      */
     public static function bootHasIsDelete(): void
     {
-        static::addGlobalScope(new IsDeleteScope());
+        static::addGlobalScope(new IsDeleteScope);
 
         static::deleting(function (Model $model) {
             // Perform logical deletion instead of physical deletion
@@ -77,6 +77,7 @@ trait HasIsDelete
         if (Auth::check() && (in_array('deleted_by', $this->getFillable()) || isset($this->deleted_by))) {
             $this->deleted_by = Auth::id();
         }
+
         return $this->saveQuietly();
     }
 
@@ -90,6 +91,7 @@ trait HasIsDelete
         if (in_array('deleted_by', $this->getFillable()) || isset($this->deleted_by)) {
             $this->deleted_by = null;
         }
+
         return $this->saveQuietly();
     }
 

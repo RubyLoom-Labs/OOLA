@@ -61,7 +61,7 @@ class HostingController extends Controller
         }
 
         return response()->json([
-            'message' => ucfirst($type) . ' record created successfully',
+            'message' => ucfirst($type).' record created successfully',
             'data' => new HostingResource($record->load('customer')),
         ], 201);
     }

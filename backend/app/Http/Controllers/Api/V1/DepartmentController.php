@@ -18,6 +18,7 @@ class DepartmentController extends Controller
     {
         $validated = $request->validate(['name' => ['required', 'string', 'max:100'], 'description' => ['nullable', 'string']]);
         $department = Department::create($validated);
+
         return response()->json($department, 201);
     }
 }

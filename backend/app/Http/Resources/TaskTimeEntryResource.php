@@ -17,9 +17,9 @@ class TaskTimeEntryResource extends JsonResource
             'user' => new UserResource($this->whenLoaded('user')),
             'started_at' => $this->started_at?->toISOString(),
             'ended_at' => $this->ended_at?->toISOString(),
-            'duration_seconds' => (int)$this->duration_seconds,
+            'duration_seconds' => (int) $this->duration_seconds,
             'notes' => $this->notes,
-            'is_running' => (bool)$this->is_running,
+            'is_running' => (bool) $this->is_running,
         ];
     }
 }

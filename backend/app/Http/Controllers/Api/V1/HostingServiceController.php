@@ -27,6 +27,7 @@ class HostingServiceController extends Controller
         ]);
 
         $service = HostingService::create($validated);
+
         return response()->json($service, 201);
     }
 }

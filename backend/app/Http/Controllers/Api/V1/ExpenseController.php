@@ -21,7 +21,8 @@ class ExpenseController extends Controller
         if ($request->has('approval_status')) {
             $query->where('approval_status', $request->approval_status);
         }
-        return ExpenseResource::collection($query->latest()->paginate((int)$request->get('per_page', 15)));
+
+        return ExpenseResource::collection($query->latest()->paginate((int) $request->get('per_page', 15)));
     }
 
     public function store(StoreExpenseRequest $request): JsonResponse
@@ -31,6 +32,7 @@ class ExpenseController extends Controller
             $data['user_id'] = $request->user()->id;
         }
         $expense = Expense::create($data);
+
         return (new ExpenseResource($expense->load(['user', 'project'])))->response()->setStatusCode(201);
     }
 
@@ -46,6 +48,7 @@ class ExpenseController extends Controller
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
         ]);
+
         return response()->json(['message' => 'Expense approved.', 'expense' => new ExpenseResource($expense)]);
     }
 
@@ -56,12 +59,14 @@ class ExpenseController extends Controller
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
         ]);
+
         return response()->json(['message' => 'Expense rejected.', 'expense' => new ExpenseResource($expense)]);
     }
 
     public function destroy(Expense $expense): JsonResponse
     {
         $expense->logicalDelete();
+
         return response()->json(['message' => 'Expense removed.']);
     }
 }

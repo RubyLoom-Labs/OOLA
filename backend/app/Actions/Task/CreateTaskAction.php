@@ -13,7 +13,7 @@ class CreateTaskAction
 {
     public function execute(array $data): Task
     {
-        $taskCode = 'TSK-' . strtoupper(Str::random(6));
+        $taskCode = 'TSK-'.strtoupper(Str::random(6));
         $data['task_code'] = $data['task_code'] ?? $taskCode;
 
         // Resolve taskable type if provided as shorthand
@@ -30,11 +30,11 @@ class CreateTaskAction
 
         $task = Task::create($data);
 
-        if (!empty($userIds)) {
+        if (! empty($userIds)) {
             $task->users()->sync($userIds);
         }
 
-        if (!empty($subtasksData)) {
+        if (! empty($subtasksData)) {
             $order = 1;
             foreach ($subtasksData as $st) {
                 Subtask::create([

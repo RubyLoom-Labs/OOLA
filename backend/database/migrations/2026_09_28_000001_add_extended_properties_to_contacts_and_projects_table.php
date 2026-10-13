@@ -11,7 +11,7 @@ return new class extends Migration
         // Add contact_id reference to projects table for direct project history tracking
         if (Schema::hasTable('projects')) {
             Schema::table('projects', function (Blueprint $table) {
-                if (!Schema::hasColumn('projects', 'contact_id')) {
+                if (! Schema::hasColumn('projects', 'contact_id')) {
                     $table->foreignId('contact_id')->nullable()->after('customer_id')->constrained('contacts')->nullOnDelete();
                     $table->index('contact_id');
                 }

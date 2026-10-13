@@ -17,33 +17,33 @@ class TaskService
         $query = Task::with(['taskable', 'stage', 'users', 'subtasks', 'timeEntries'])
             ->withCount(['subtasks']);
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('task_code', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('task_code', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
-        if (!empty($filters['taskable_type']) && !empty($filters['taskable_id'])) {
+        if (! empty($filters['taskable_type']) && ! empty($filters['taskable_id'])) {
             $query->where('taskable_type', $filters['taskable_type'])
-                  ->where('taskable_id', $filters['taskable_id']);
+                ->where('taskable_id', $filters['taskable_id']);
         }
 
-        if (!empty($filters['stage_id'])) {
+        if (! empty($filters['stage_id'])) {
             $query->where('task_stage_id', $filters['stage_id']);
         }
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['priority'])) {
+        if (! empty($filters['priority'])) {
             $query->where('priority', $filters['priority']);
         }
 
-        if (!empty($filters['assigned_user_id'])) {
+        if (! empty($filters['assigned_user_id'])) {
             $userId = $filters['assigned_user_id'];
             $query->whereHas('users', function ($uq) use ($userId) {
                 $uq->where('users.id', $userId);
@@ -58,34 +58,34 @@ class TaskService
         return TaskStage::with(['tasks' => function ($query) use ($taskableType, $taskableId) {
             if ($taskableType && $taskableId) {
                 $query->where('taskable_type', $taskableType)
-                      ->where('taskable_id', $taskableId);
+                    ->where('taskable_id', $taskableId);
             }
             $query->with(['taskable', 'users', 'subtasks'])
-                  ->withCount('subtasks')
-                  ->latest();
+                ->withCount('subtasks')
+                ->latest();
         }])->orderBy('order_column')->get();
     }
 
     public function createTask(array $data, ?array $userIds = []): Task
     {
         // Enforce Lead / Project assignment constraint (PRD Section 25)
-        if (!empty($data['taskable_type']) && !empty($data['taskable_id']) && !empty($userIds)) {
-            $this->validateTaskAssignment($data['taskable_type'], (int)$data['taskable_id'], $userIds);
+        if (! empty($data['taskable_type']) && ! empty($data['taskable_id']) && ! empty($userIds)) {
+            $this->validateTaskAssignment($data['taskable_type'], (int) $data['taskable_id'], $userIds);
         }
 
         if (empty($data['task_code'])) {
-            $data['task_code'] = 'TSK-' . strtoupper(substr(uniqid(), -5));
+            $data['task_code'] = 'TSK-'.strtoupper(substr(uniqid(), -5));
         }
 
         $task = Task::create($data);
 
-        if (!empty($userIds)) {
+        if (! empty($userIds)) {
             $task->users()->sync($userIds);
         }
 
         ActivityLogger::log('Task Created', "Created task: {$task->title}", $task);
 
-        if (!empty($userIds)) {
+        if (! empty($userIds)) {
             NotificationService::sendMany(
                 $userIds,
                 'New Task Assigned',
@@ -139,7 +139,7 @@ class TaskService
             if ($lead) {
                 $allowedIds = $lead->users()->pluck('users.id')->toArray();
                 $diff = array_diff($userIds, $allowedIds);
-                if (!empty($diff)) {
+                if (! empty($diff)) {
                     throw ValidationException::withMessages([
                         'users' => ['A task belonging to a Lead may only be assigned to members already added to that Lead.'],
                     ]);
@@ -150,7 +150,7 @@ class TaskService
             if ($project) {
                 $allowedIds = $project->users()->pluck('users.id')->toArray();
                 $diff = array_diff($userIds, $allowedIds);
-                if (!empty($diff)) {
+                if (! empty($diff)) {
                     throw ValidationException::withMessages([
                         'users' => ['A task belonging to a Project may only be assigned to members of that Project.'],
                     ]);

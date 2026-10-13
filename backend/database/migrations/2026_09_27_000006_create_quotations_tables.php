@@ -43,7 +43,7 @@ return new class extends Migration
             $table->id();
             $table->string('quotation_number')->unique();
             $table->string('title')->nullable();
-            
+
             $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
             $table->foreignId('project_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('lead_id')->nullable()->constrained()->nullOnDelete();

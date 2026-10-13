@@ -6,7 +6,6 @@ use App\Models\ActivityLog;
 use App\Models\Task;
 use App\Models\TaskTimeEntry;
 use App\Models\User;
-use Exception;
 
 class StartTimeTrackingAction
 {

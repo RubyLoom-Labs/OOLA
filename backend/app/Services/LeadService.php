@@ -14,27 +14,27 @@ class LeadService
         $query = Lead::with(['customer', 'contact', 'stage', 'source', 'users'])
             ->withCount(['tasks']);
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('lead_title', 'like', "%{$search}%")
-                  ->orWhere('lead_code', 'like', "%{$search}%")
-                  ->orWhere('requirement_name', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function ($cq) use ($search) {
-                      $cq->where('company_name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('lead_code', 'like', "%{$search}%")
+                    ->orWhere('requirement_name', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($cq) use ($search) {
+                        $cq->where('company_name', 'like', "%{$search}%");
+                    });
             });
         }
 
-        if (!empty($filters['stage_id'])) {
+        if (! empty($filters['stage_id'])) {
             $query->where('lead_stage_id', $filters['stage_id']);
         }
 
-        if (!empty($filters['priority'])) {
+        if (! empty($filters['priority'])) {
             $query->where('priority', $filters['priority']);
         }
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
@@ -45,27 +45,27 @@ class LeadService
     {
         return LeadStage::with(['leads' => function ($query) {
             $query->with(['customer', 'contact', 'users', 'tasks'])
-                  ->withCount('tasks')
-                  ->latest();
+                ->withCount('tasks')
+                ->latest();
         }])->orderBy('order_column')->get();
     }
 
     public function createLead(array $data, ?array $userIds = []): Lead
     {
         if (empty($data['lead_code'])) {
-            $data['lead_code'] = 'LEAD-' . date('Y') . '-' . strtoupper(substr(uniqid(), -4));
+            $data['lead_code'] = 'LEAD-'.date('Y').'-'.strtoupper(substr(uniqid(), -4));
         }
 
         $lead = Lead::create($data);
 
-        if (!empty($userIds)) {
+        if (! empty($userIds)) {
             $lead->users()->sync($userIds);
         }
 
         ActivityLogger::log('Lead Created', "Created lead: {$lead->lead_title}", $lead);
 
         // Notify assigned users
-        if (!empty($userIds)) {
+        if (! empty($userIds)) {
             NotificationService::sendMany(
                 $userIds,
                 'New Lead Assigned',
@@ -102,7 +102,7 @@ class LeadService
     {
         $oldStage = $lead->stage?->name;
         $lead->lead_stage_id = $stageId;
-        
+
         $newStage = LeadStage::find($stageId);
         if ($newStage?->is_won) {
             $lead->status = 'Won';
@@ -125,7 +125,7 @@ class LeadService
     public function assignUser(Lead $lead, int $userId, string $role = 'Follower'): void
     {
         $lead->users()->syncWithoutDetaching([$userId => ['role' => $role]]);
-        
+
         NotificationService::send(
             $userId,
             'Assigned to Lead',

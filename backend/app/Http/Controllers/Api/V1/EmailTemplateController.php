@@ -25,6 +25,7 @@ class EmailTemplateController extends Controller
         ]);
 
         $template = EmailTemplate::create($validated);
+
         return response()->json($template, 201);
     }
 }

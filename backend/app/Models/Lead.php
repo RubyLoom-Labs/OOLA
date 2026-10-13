@@ -102,6 +102,7 @@ class Lead extends BaseModel
     public function getTotalWorkingSecondsAttribute(): int
     {
         $taskIds = $this->tasks()->pluck('id');
+
         return (int) TaskTimeEntry::whereIn('task_id', $taskIds)->sum('duration_seconds');
     }
 }

@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('customer_id')->nullable()->constrained('customers')->cascadeOnDelete();
             $table->foreignId('contact_id')->nullable()->constrained('contacts')->cascadeOnDelete();
-            
+
             $table->string('phone_number');
             $table->string('type')->default('Mobile'); // Mobile, Work, Home, WhatsApp, Direct, Fax, Other
             $table->boolean('is_primary')->default(false);

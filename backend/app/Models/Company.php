@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Company extends BaseModel
@@ -17,6 +15,7 @@ class Company extends BaseModel
         'company_name',
         'company_type_id',
         'email',
+        'phone_number',
         'industry',
         'company_size_id',
         'status',
@@ -98,16 +97,6 @@ class Company extends BaseModel
     public function contacts(): HasMany
     {
         return $this->hasMany(Contact::class, 'company_id');
-    }
-
-    public function phoneNumbers(): HasManyThrough
-    {
-        return $this->hasManyThrough(ContactPhoneNumber::class, Contact::class, 'company_id', 'contact_id');
-    }
-
-    public function primaryPhoneNumber(): HasOneThrough
-    {
-        return $this->hasOneThrough(ContactPhoneNumber::class, Contact::class, 'company_id', 'contact_id')->where('contact_phone_numbers.is_primary', true);
     }
 
     public function leads(): HasMany

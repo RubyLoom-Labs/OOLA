@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\LeadSource;
 use App\Models\LeadStage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,6 +26,7 @@ class LeadStageController extends Controller
         ]);
 
         $stage = LeadStage::create($validated);
+
         return response()->json($stage, 201);
     }
 }

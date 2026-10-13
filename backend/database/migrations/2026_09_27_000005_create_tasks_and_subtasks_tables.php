@@ -28,7 +28,7 @@ return new class extends Migration
             $table->string('priority')->default('Medium'); // Low, Medium, High, Urgent
             $table->foreignId('task_stage_id')->nullable()->constrained('task_stages')->nullOnDelete();
             $table->string('status')->default('Pending'); // Pending, In Progress, In Review, Completed, Overdue
-            
+
             // Polymorphic parent: Lead or Project
             $table->nullableMorphs('taskable');
 

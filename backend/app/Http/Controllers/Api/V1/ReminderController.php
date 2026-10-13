@@ -31,6 +31,7 @@ class ReminderController extends Controller
         $validated['user_id'] = $request->user()->id;
 
         $reminder = Reminder::create($validated);
+
         return response()->json($reminder, 201);
     }
 }

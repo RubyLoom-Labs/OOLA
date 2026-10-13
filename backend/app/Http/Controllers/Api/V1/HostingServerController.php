@@ -32,6 +32,7 @@ class HostingServerController extends Controller
         ]);
 
         $server = HostingServer::create($validated);
+
         return response()->json($server, 201);
     }
 }

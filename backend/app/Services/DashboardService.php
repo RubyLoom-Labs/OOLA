@@ -45,12 +45,13 @@ class DashboardService
 
         return $stages->map(function ($stage) {
             $leadsValue = Lead::where('lead_stage_id', $stage->id)->sum('budget_quoted');
+
             return [
                 'id' => $stage->id,
                 'name' => $stage->name,
                 'color' => $stage->color,
                 'count' => $stage->leads_count,
-                'total_value' => (float)$leadsValue,
+                'total_value' => (float) $leadsValue,
             ];
         })->toArray();
     }

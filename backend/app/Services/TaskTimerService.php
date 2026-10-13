@@ -5,8 +5,6 @@ namespace App\Services;
 use App\Models\Task;
 use App\Models\TaskTimeEntry;
 use App\Models\User;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class TaskTimerService
@@ -45,7 +43,7 @@ class TaskTimerService
             ->where('is_running', true)
             ->first();
 
-        if (!$running) {
+        if (! $running) {
             throw ValidationException::withMessages(['timer' => ['No active timer found for this task.']]);
         }
 

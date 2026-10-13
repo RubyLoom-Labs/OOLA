@@ -23,7 +23,7 @@ class LeadResource extends JsonResource
             'stage' => $this->whenLoaded('stage'),
             'lead_source_id' => $this->lead_source_id,
             'source' => $this->whenLoaded('source'),
-            'budget_quoted' => (float)$this->budget_quoted,
+            'budget_quoted' => (float) $this->budget_quoted,
             'currency' => $this->currency,
             'priority' => $this->priority,
             'status' => $this->status,

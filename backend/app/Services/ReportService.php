@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Customer;
 use App\Models\Expense;
 use App\Models\Lead;
 use App\Models\LeadSource;

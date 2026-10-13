@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('payment_code')->unique()->nullable();
             $table->string('invoice_number')->nullable();
-            
+
             $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
             $table->foreignId('project_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('quotation_id')->nullable()->constrained()->nullOnDelete();
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->decimal('payment_amount', 15, 2)->default(0);
             $table->decimal('paid_amount', 15, 2)->default(0);
             $table->decimal('outstanding_amount', 15, 2)->default(0);
-            
+
             $table->string('payment_terms')->nullable();
             $table->date('payment_date')->nullable();
             $table->string('payment_method')->default('Online'); // Cash, Online, Cheque, Bank Transfer
@@ -52,7 +52,7 @@ return new class extends Migration
             $table->decimal('amount', 15, 2)->default(0);
             $table->string('category')->default('General'); // Server, Software, Travel, Office, Hardware, Contractor
             $table->date('expense_date')->nullable();
-            
+
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('project_id')->nullable()->constrained()->nullOnDelete();
 

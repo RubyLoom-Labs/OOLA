@@ -18,7 +18,7 @@ class CompanySizeController extends Controller
         $query = CompanySize::query();
 
         // If 'all' flag is not set, only return active sizes (status = 1)
-        if (!$request->boolean('all')) {
+        if (! $request->boolean('all')) {
             $query->active();
         }
 
@@ -60,7 +60,7 @@ class CompanySizeController extends Controller
     public function update(Request $request, CompanySize $companySize): CompanySizeResource
     {
         $validated = $request->validate([
-            'name' => ['sometimes', 'required', 'string', 'max:100', 'unique:company_sizes,name,' . $companySize->id],
+            'name' => ['sometimes', 'required', 'string', 'max:100', 'unique:company_sizes,name,'.$companySize->id],
             'status' => ['nullable', 'boolean'],
         ]);
 
@@ -75,6 +75,7 @@ class CompanySizeController extends Controller
     public function destroy(CompanySize $companySize): JsonResponse
     {
         $companySize->logicalDelete();
+
         return response()->json(['message' => 'Company size removed successfully.']);
     }
 }

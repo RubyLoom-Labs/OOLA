@@ -17,13 +17,15 @@ class PaymentController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $payments = $this->service->getList($request->all(), (int)$request->get('per_page', 15));
+        $payments = $this->service->getList($request->all(), (int) $request->get('per_page', 15));
+
         return PaymentResource::collection($payments);
     }
 
     public function store(StorePaymentRequest $request): JsonResponse
     {
         $payment = $this->service->createPayment($request->validated());
+
         return (new PaymentResource($payment->load(['customer', 'project'])))
             ->response()
             ->setStatusCode(201);
@@ -37,18 +39,21 @@ class PaymentController extends Controller
     public function update(Request $request, Payment $payment): PaymentResource
     {
         $payment = $this->service->updatePayment($payment, $request->all());
+
         return new PaymentResource($payment->load(['customer', 'project']));
     }
 
     public function projectLedger(int $projectId): JsonResponse
     {
         $ledger = $this->service->getProjectLedger($projectId);
+
         return response()->json($ledger);
     }
 
     public function destroy(Payment $payment): JsonResponse
     {
         $payment->logicalDelete();
+
         return response()->json(['message' => 'Payment record archived successfully.']);
     }
 }

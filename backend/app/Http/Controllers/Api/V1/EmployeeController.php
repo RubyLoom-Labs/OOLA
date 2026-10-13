@@ -22,16 +22,18 @@ class EmployeeController extends Controller
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
-        return EmployeeResource::collection($query->latest()->paginate((int)$request->get('per_page', 15)));
+
+        return EmployeeResource::collection($query->latest()->paginate((int) $request->get('per_page', 15)));
     }
 
     public function store(StoreEmployeeRequest $request): JsonResponse
     {
         $data = $request->validated();
         if (empty($data['employee_code'])) {
-            $data['employee_code'] = 'EMP-' . strtoupper(substr(uniqid(), -4));
+            $data['employee_code'] = 'EMP-'.strtoupper(substr(uniqid(), -4));
         }
         $employee = Employee::create($data);
+
         return (new EmployeeResource($employee->load(['department', 'designation'])))->response()->setStatusCode(201);
     }
 
@@ -43,12 +45,13 @@ class EmployeeController extends Controller
     public function update(Request $request, Employee $employee): EmployeeResource
     {
         $employee->update($request->all());
+
         return new EmployeeResource($employee->load(['department', 'designation']));
     }
 
     public function timesheets(Employee $employee): JsonResponse
     {
-        if (!$employee->user_id) {
+        if (! $employee->user_id) {
             return response()->json(['total_seconds' => 0, 'entries' => []]);
         }
 
@@ -70,6 +73,7 @@ class EmployeeController extends Controller
     public function destroy(Employee $employee): JsonResponse
     {
         $employee->logicalDelete();
+
         return response()->json(['message' => 'Employee archived successfully.']);
     }
 }

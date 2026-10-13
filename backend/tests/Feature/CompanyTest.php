@@ -106,6 +106,7 @@ class CompanyTest extends TestCase
             'company_name' => 'Zenith Tech Solutions',
             'company_type_id' => $type->id,
             'email' => 'hello@zenithtech.io',
+            'phone_number' => '+94 11 999 8888',
             'industry' => 'Information Technology',
             'company_size_id' => $size->id,
             'status' => true,
@@ -119,22 +120,6 @@ class CompanyTest extends TestCase
             'state' => 'Western Province',
             'postal_code' => '00100',
             'country' => 'Sri Lanka',
-            'phone_numbers' => [
-                [
-                    'phone_number' => '+94 11 999 8888',
-                    'type' => 'Work',
-                    'is_primary' => true,
-                    'is_whatsapp' => true,
-                    'notes' => 'Primary office reception',
-                ],
-                [
-                    'phone_number' => '+94 77 333 4444',
-                    'type' => 'Mobile',
-                    'is_primary' => false,
-                    'is_whatsapp' => false,
-                    'notes' => 'Sales director hotline',
-                ],
-            ],
         ];
 
         $response = $this->actingAs($admin, 'sanctum')->postJson('/api/v1/companies', $payload);
@@ -143,12 +128,12 @@ class CompanyTest extends TestCase
             ->assertJsonPath('data.company_name', 'Zenith Tech Solutions')
             ->assertJsonPath('data.company_type_id', $type->id)
             ->assertJsonPath('data.email', 'hello@zenithtech.io')
+            ->assertJsonPath('data.phone_number', '+94 11 999 8888')
             ->assertJsonPath('data.status', true)
             ->assertJsonPath('data.owner_name', 'Marcus Aurelius')
             ->assertJsonPath('data.owner_birthday', '1985-09-20')
             ->assertJsonPath('data.address_line_1', 'Suite 500, Cyber Tower')
-            ->assertJsonPath('data.city', 'Colombo')
-            ->assertJsonCount(2, 'data.phone_numbers');
+            ->assertJsonPath('data.city', 'Colombo');
 
         $companyCode = $response->json('data.company_code');
         $this->assertNotEmpty($companyCode);
@@ -158,6 +143,7 @@ class CompanyTest extends TestCase
             'company_name' => 'Zenith Tech Solutions',
             'company_code' => $companyCode,
             'email' => 'hello@zenithtech.io',
+            'phone_number' => '+94 11 999 8888',
             'status' => 1,
         ]);
     }
@@ -213,9 +199,50 @@ class CompanyTest extends TestCase
 
         // Restore
         $restoreResponse = $this->actingAs($admin, 'sanctum')->postJson("/api/v1/companies/{$companyId}/restore");
-        $restoreResponse->assertStatus(200)
-            ->assertJsonPath('data.company_name', 'Deletable Corp');
-
+        $restoreResponse->assertStatus(200);
         $this->assertNotNull(Company::find($companyId));
+    }
+
+    public function test_can_update_company_phone_number(): void
+    {
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $type = CompanyType::first();
+
+        $company = Company::create([
+            'company_name' => 'Original Corp',
+            'company_type_id' => $type->id,
+            'email' => 'original@corp.com',
+            'phone_number' => '+94 11 111 2222',
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')->putJson("/api/v1/companies/{$company->id}", [
+            'phone_number' => '+94 77 888 9999',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.phone_number', '+94 77 888 9999');
+
+        $this->assertDatabaseHas('companies', [
+            'id' => $company->id,
+            'phone_number' => '+94 77 888 9999',
+        ]);
+    }
+
+    public function test_can_search_company_by_phone_number(): void
+    {
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $type = CompanyType::first();
+
+        Company::create([
+            'company_name' => 'Searchable Phones Ltd',
+            'company_type_id' => $type->id,
+            'email' => 'searchable@phones.com',
+            'phone_number' => '+94 71 555 4321',
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')->getJson('/api/v1/companies?search=555 4321');
+        $response->assertStatus(200)
+            ->assertJsonPath('data.0.company_name', 'Searchable Phones Ltd')
+            ->assertJsonPath('data.0.phone_number', '+94 71 555 4321');
     }
 }

@@ -46,7 +46,7 @@ return new class extends Migration
         // Add foreign key or support on contact_phone_numbers if needed
         if (Schema::hasTable('contact_phone_numbers')) {
             Schema::table('contact_phone_numbers', function (Blueprint $table) {
-                if (!Schema::hasColumn('contact_phone_numbers', 'company_id')) {
+                if (! Schema::hasColumn('contact_phone_numbers', 'company_id')) {
                     $table->unsignedBigInteger('company_id')->nullable()->after('id');
                     $table->index(['company_id', 'is_primary']);
                 }

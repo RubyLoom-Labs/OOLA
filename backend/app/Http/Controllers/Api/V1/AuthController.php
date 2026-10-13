@@ -18,7 +18,7 @@ class AuthController extends Controller
     {
         $user = User::with('roles.permissions')->where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials do not match our records.'],
             ]);
@@ -42,6 +42,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user()->load('roles.permissions');
+
         return response()->json([
             'user' => new UserResource($user),
         ]);
@@ -67,7 +68,7 @@ class AuthController extends Controller
             'password' => ['nullable', 'string', 'min:8'],
         ]);
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         }
 

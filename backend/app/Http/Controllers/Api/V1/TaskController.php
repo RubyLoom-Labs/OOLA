@@ -18,7 +18,8 @@ class TaskController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $tasks = $this->service->getList($request->all(), (int)$request->get('per_page', 15));
+        $tasks = $this->service->getList($request->all(), (int) $request->get('per_page', 15));
+
         return TaskResource::collection($tasks);
     }
 
@@ -26,8 +27,9 @@ class TaskController extends Controller
     {
         $kanban = $this->service->getKanban(
             $request->get('taskable_type'),
-            $request->get('taskable_id') ? (int)$request->get('taskable_id') : null
+            $request->get('taskable_id') ? (int) $request->get('taskable_id') : null
         );
+
         return response()->json($kanban);
     }
 
@@ -37,6 +39,7 @@ class TaskController extends Controller
             $request->validated(),
             $request->input('user_ids', [])
         );
+
         return (new TaskResource($task->load(['taskable', 'stage', 'users', 'subtasks'])))
             ->response()
             ->setStatusCode(201);
@@ -54,13 +57,15 @@ class TaskController extends Controller
             $request->validated(),
             $request->input('user_ids')
         );
+
         return new TaskResource($task->load(['taskable', 'stage', 'users', 'subtasks']));
     }
 
     public function updateStage(Request $request, Task $task): JsonResponse
     {
         $request->validate(['stage_id' => ['required', 'exists:task_stages,id']]);
-        $task = $this->service->updateStage($task, (int)$request->stage_id);
+        $task = $this->service->updateStage($task, (int) $request->stage_id);
+
         return response()->json([
             'message' => 'Task stage updated successfully',
             'task' => new TaskResource($task->load('stage')),
@@ -70,6 +75,7 @@ class TaskController extends Controller
     public function destroy(Task $task): JsonResponse
     {
         $task->logicalDelete();
+
         return response()->json(['message' => 'Task archived successfully.']);
     }
 }

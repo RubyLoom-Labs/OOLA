@@ -13,7 +13,7 @@ class ExpenseResource extends JsonResource
             'id' => $this->id,
             'expense_code' => $this->expense_code,
             'title' => $this->title,
-            'amount' => (float)$this->amount,
+            'amount' => (float) $this->amount,
             'category' => $this->category,
             'expense_date' => $this->expense_date?->format('Y-m-d'),
             'user_id' => $this->user_id,

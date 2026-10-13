@@ -14,6 +14,7 @@ class RoleController extends Controller
     public function index(): JsonResponse
     {
         $roles = Role::with('permissions')->get();
+
         return response()->json(RoleResource::collection($roles));
     }
 
@@ -27,7 +28,7 @@ class RoleController extends Controller
         ]);
 
         $role = Role::create($validated);
-        if (!empty($validated['permission_ids'])) {
+        if (! empty($validated['permission_ids'])) {
             $role->permissions()->sync($validated['permission_ids']);
         }
 

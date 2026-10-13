@@ -18,13 +18,15 @@ class CustomerController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $customers = $this->service->getList($request->all(), (int)$request->get('per_page', 15));
+        $customers = $this->service->getList($request->all(), (int) $request->get('per_page', 15));
+
         return CustomerResource::collection($customers);
     }
 
     public function store(StoreCustomerRequest $request): JsonResponse
     {
         $customer = $this->service->createCustomer($request->validated());
+
         return (new CustomerResource($customer->load(['contacts', 'phoneNumbers', 'primaryPhoneNumber'])))
             ->response()
             ->setStatusCode(201);
@@ -38,12 +40,14 @@ class CustomerController extends Controller
     public function update(UpdateCustomerRequest $request, Customer $customer): CustomerResource
     {
         $customer = $this->service->updateCustomer($customer, $request->validated());
+
         return new CustomerResource($customer->load(['contacts', 'phoneNumbers', 'primaryPhoneNumber']));
     }
 
     public function destroy(Customer $customer): JsonResponse
     {
         $this->service->deleteCustomer($customer);
+
         return response()->json(['message' => 'Customer archived successfully (logical delete).']);
     }
 
@@ -51,6 +55,7 @@ class CustomerController extends Controller
     {
         $customer = Customer::withoutGlobalScopes()->where('is_delete', true)->findOrFail($id);
         $customer->restore();
+
         return response()->json(['message' => 'Customer restored successfully.']);
     }
 }

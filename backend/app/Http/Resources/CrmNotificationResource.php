@@ -15,7 +15,7 @@ class CrmNotificationResource extends JsonResource
             'message' => $this->message,
             'type' => $this->type,
             'action_url' => $this->action_url,
-            'is_read' => (bool)$this->is_read,
+            'is_read' => (bool) $this->is_read,
             'read_at' => $this->read_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
         ];

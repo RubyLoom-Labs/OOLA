@@ -110,7 +110,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/tasks/kanban', [TaskController::class, 'kanban']);
         Route::match(['post', 'put'], '/tasks/{task}/stage', [TaskController::class, 'updateStage']);
         Route::apiResource('tasks', TaskController::class);
-        
+
         Route::post('/subtasks', [SubtaskController::class, 'store']);
         Route::put('/subtasks/{subtask}', [SubtaskController::class, 'update']);
         Route::post('/subtasks/{subtask}/toggle', [SubtaskController::class, 'toggle']);

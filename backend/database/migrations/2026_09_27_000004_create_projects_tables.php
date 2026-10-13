@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('project_code')->unique()->nullable();
             $table->string('project_title');
             $table->text('description')->nullable();
-            
+
             $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
             $table->foreignId('lead_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('project_manager_id')->nullable()->constrained('users')->nullOnDelete();
@@ -33,7 +33,7 @@ return new class extends Migration
             $table->string('project_type')->default('Web Development'); // Web, Mobile, SEO, Maintenance, Cloud, Custom
             $table->string('priority')->default('Medium'); // Low, Medium, High, Urgent
             $table->string('status')->default('In Progress'); // Not Started, In Progress, On Hold, Completed, Cancelled
-            
+
             $table->date('start_date')->nullable();
             $table->date('expected_end_date')->nullable();
             $table->date('actual_end_date')->nullable();

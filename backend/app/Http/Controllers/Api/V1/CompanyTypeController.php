@@ -18,7 +18,7 @@ class CompanyTypeController extends Controller
         $query = CompanyType::query();
 
         // If 'all' flag is not set, only return active types (status = 1)
-        if (!$request->boolean('all')) {
+        if (! $request->boolean('all')) {
             $query->active();
         }
 
@@ -60,7 +60,7 @@ class CompanyTypeController extends Controller
     public function update(Request $request, CompanyType $companyType): CompanyTypeResource
     {
         $validated = $request->validate([
-            'name' => ['sometimes', 'required', 'string', 'max:100', 'unique:company_types,name,' . $companyType->id],
+            'name' => ['sometimes', 'required', 'string', 'max:100', 'unique:company_types,name,'.$companyType->id],
             'status' => ['nullable', 'boolean'],
         ]);
 
@@ -75,6 +75,7 @@ class CompanyTypeController extends Controller
     public function destroy(CompanyType $companyType): JsonResponse
     {
         $companyType->logicalDelete();
+
         return response()->json(['message' => 'Company type removed successfully.']);
     }
 }

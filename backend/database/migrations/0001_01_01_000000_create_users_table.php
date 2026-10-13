@@ -24,7 +24,7 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
-            
+
             // Standard OOLA audit & soft delete
             $table->boolean('is_delete')->default(false)->index();
             $table->unsignedBigInteger('created_by')->nullable();

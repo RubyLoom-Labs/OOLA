@@ -17,7 +17,8 @@ class QuotationController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $quotations = $this->service->getList($request->all(), (int)$request->get('per_page', 15));
+        $quotations = $this->service->getList($request->all(), (int) $request->get('per_page', 15));
+
         return QuotationResource::collection($quotations);
     }
 
@@ -27,6 +28,7 @@ class QuotationController extends Controller
             $request->validated(),
             $request->input('items', [])
         );
+
         return (new QuotationResource($quotation->load(['customer', 'items'])))
             ->response()
             ->setStatusCode(201);
@@ -44,24 +46,28 @@ class QuotationController extends Controller
             $request->except(['items']),
             $request->input('items')
         );
+
         return new QuotationResource($quotation->load(['customer', 'items']));
     }
 
     public function approve(Quotation $quotation): JsonResponse
     {
         $quotation->update(['status' => 'Approved']);
+
         return response()->json(['message' => 'Quotation approved successfully.', 'quotation' => new QuotationResource($quotation)]);
     }
 
     public function reject(Quotation $quotation): JsonResponse
     {
         $quotation->update(['status' => 'Rejected']);
+
         return response()->json(['message' => 'Quotation rejected.', 'quotation' => new QuotationResource($quotation)]);
     }
 
     public function destroy(Quotation $quotation): JsonResponse
     {
         $quotation->logicalDelete();
+
         return response()->json(['message' => 'Quotation archived successfully.']);
     }
 }

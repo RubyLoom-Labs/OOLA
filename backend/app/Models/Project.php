@@ -123,6 +123,7 @@ class Project extends BaseModel
     public function getOutstandingBalanceAttribute(): float
     {
         $totalPaid = (float) $this->payments()->where('status', 'Paid')->sum('paid_amount');
+
         return max(0, (float) $this->quoted_amount - $totalPaid);
     }
 

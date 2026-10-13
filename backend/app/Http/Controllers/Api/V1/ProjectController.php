@@ -18,13 +18,15 @@ class ProjectController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $projects = $this->service->getList($request->all(), (int)$request->get('per_page', 15));
+        $projects = $this->service->getList($request->all(), (int) $request->get('per_page', 15));
+
         return ProjectResource::collection($projects);
     }
 
     public function kanban(): JsonResponse
     {
         $kanban = $this->service->getKanban();
+
         return response()->json($kanban);
     }
 
@@ -34,6 +36,7 @@ class ProjectController extends Controller
             $request->validated(),
             $request->input('user_ids', [])
         );
+
         return (new ProjectResource($project->load(['customer', 'manager', 'stage', 'users'])))
             ->response()
             ->setStatusCode(201);
@@ -58,13 +61,15 @@ class ProjectController extends Controller
     public function update(UpdateProjectRequest $request, Project $project): ProjectResource
     {
         $project = $this->service->updateProject($project, $request->validated());
+
         return new ProjectResource($project->load(['customer', 'manager', 'stage', 'users']));
     }
 
     public function updateStage(Request $request, Project $project): JsonResponse
     {
         $request->validate(['stage_id' => ['required', 'exists:project_stages,id']]);
-        $project = $this->service->updateStage($project, (int)$request->stage_id);
+        $project = $this->service->updateStage($project, (int) $request->stage_id);
+
         return response()->json([
             'message' => 'Project stage updated successfully',
             'project' => new ProjectResource($project->load('stage')),
@@ -74,6 +79,7 @@ class ProjectController extends Controller
     public function destroy(Project $project): JsonResponse
     {
         $project->logicalDelete();
+
         return response()->json(['message' => 'Project archived successfully.']);
     }
 }

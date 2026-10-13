@@ -14,19 +14,19 @@ return new class extends Migration
         }
 
         Schema::table('contacts', function (Blueprint $table) {
-            if (!Schema::hasColumn('contacts', 'company_id')) {
+            if (! Schema::hasColumn('contacts', 'company_id')) {
                 $table->foreignId('company_id')->nullable()->after('id')->constrained('customers')->nullOnDelete();
             }
-            if (!Schema::hasColumn('contacts', 'company')) {
+            if (! Schema::hasColumn('contacts', 'company')) {
                 $table->string('company')->nullable()->after('company_id');
             }
-            if (!Schema::hasColumn('contacts', 'address')) {
+            if (! Schema::hasColumn('contacts', 'address')) {
                 $table->text('address')->nullable()->after('website');
             }
-            if (!Schema::hasColumn('contacts', 'birthday')) {
+            if (! Schema::hasColumn('contacts', 'birthday')) {
                 $table->date('birthday')->nullable()->after('address');
             }
-            if (!Schema::hasColumn('contacts', 'status')) {
+            if (! Schema::hasColumn('contacts', 'status')) {
                 $table->string('status')->default('Active')->after('birthday');
             }
         });
@@ -56,7 +56,7 @@ return new class extends Migration
                     $existing[] = $col;
                 }
             }
-            if (!empty($existing)) {
+            if (! empty($existing)) {
                 $table->dropColumn($existing);
             }
         });
