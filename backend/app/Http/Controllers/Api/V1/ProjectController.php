@@ -30,6 +30,18 @@ class ProjectController extends Controller
         return response()->json($kanban);
     }
 
+    /**
+     * Get the next upcoming project code for a company.
+     */
+    public function nextCode(Request $request): JsonResponse
+    {
+        $companyId = $request->input('company_id') ?: $request->input('customer_id');
+
+        return response()->json([
+            'next_code' => Project::generateProjectCode($companyId),
+        ]);
+    }
+
     public function store(StoreProjectRequest $request): JsonResponse
     {
         $project = $this->service->createProject(

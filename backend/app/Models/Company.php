@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\Storage;
 
 class Company extends BaseModel
 {
@@ -42,6 +43,24 @@ class Company extends BaseModel
         'owner_birthday' => 'date',
         'is_delete' => 'boolean',
     ];
+
+    protected $appends = [
+        'logo_url',
+    ];
+
+    /**
+     * Get the resolved logo public URL.
+     */
+    public function getLogoUrlAttribute(): ?string
+    {
+        if (empty($this->logo)) {
+            return null;
+        }
+
+        return filter_var($this->logo, FILTER_VALIDATE_URL)
+            ? $this->logo
+            : Storage::disk('public')->url($this->logo);
+    }
 
     protected static function booted(): void
     {

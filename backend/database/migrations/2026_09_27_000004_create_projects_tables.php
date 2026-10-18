@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('project_title');
             $table->text('description')->nullable();
 
-            $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('customer_id');
             $table->foreignId('lead_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('project_manager_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('stage_id')->nullable()->constrained('project_stages')->nullOnDelete();

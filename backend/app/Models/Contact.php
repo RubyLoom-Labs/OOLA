@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Storage;
 
 class Contact extends BaseModel
 {
@@ -15,7 +16,7 @@ class Contact extends BaseModel
         'last_name',
         'designation',
         'email',
-        'phone',
+        'avatar',
         'address',
         'birthday',
         'status',
@@ -45,7 +46,7 @@ class Contact extends BaseModel
      */
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'company_id');
+        return $this->belongsTo(Company::class, 'company_id');
     }
 
     /**
@@ -135,6 +136,20 @@ class Contact extends BaseModel
     public function setCustomerIdAttribute(?int $value): void
     {
         $this->attributes['company_id'] = $value;
+    }
+
+    /**
+     * Get the resolved avatar public URL.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (empty($this->avatar)) {
+            return null;
+        }
+
+        return filter_var($this->avatar, FILTER_VALIDATE_URL)
+            ? $this->avatar
+            : Storage::disk('public')->url($this->avatar);
     }
 
     /**

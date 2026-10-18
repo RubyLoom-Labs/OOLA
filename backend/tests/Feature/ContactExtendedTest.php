@@ -9,6 +9,8 @@ use App\Models\Customer;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ContactExtendedTest extends TestCase
@@ -261,5 +263,62 @@ class ContactExtendedTest extends TestCase
         $this->assertNotNull(Contact::find($contactId));
         $this->assertNotNull(ContactSite::find($site->id));
         $this->assertNotNull(ContactPhoneNumber::find($phone->id));
+    }
+
+    public function test_can_update_contact_with_base64_avatar(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $customer = Customer::first();
+
+        $contact = Contact::create([
+            'company_id' => $customer->id,
+            'first_name' => 'Inuri',
+            'last_name' => 'Amasha',
+            'email' => 'inuri@gmail.com',
+        ]);
+
+        // 1x1 transparent GIF in base64 data URI
+        $base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+        $response = $this->actingAs($admin, 'sanctum')->putJson("/api/v1/contacts/{$contact->id}", [
+            'first_name' => 'Inuri',
+            'last_name' => 'Amasha',
+            'avatar' => $base64Image,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.first_name', 'Inuri')
+            ->assertJsonPath('data.last_name', 'Amasha');
+
+        $this->assertNotNull($response->json('data.avatar'));
+        $this->assertNotNull($response->json('data.avatar_url'));
+
+        $contact->refresh();
+        $this->assertNotEmpty($contact->avatar);
+        Storage::disk('public')->assertExists($contact->avatar);
+    }
+
+    public function test_can_create_contact_with_uploaded_avatar_file(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $customer = Customer::first();
+        $file = UploadedFile::fake()->image('profile.jpg');
+
+        $response = $this->actingAs($admin, 'sanctum')->post('/api/v1/contacts', [
+            'company_id' => $customer->id,
+            'first_name' => 'Kasun',
+            'last_name' => 'Perera',
+            'email' => 'kasun@test.com',
+            'avatar' => $file,
+        ], ['Accept' => 'application/json']);
+
+        $response->assertStatus(201);
+        $avatarPath = $response->json('data.avatar');
+        $this->assertNotNull($avatarPath);
+        Storage::disk('public')->assertExists($avatarPath);
     }
 }

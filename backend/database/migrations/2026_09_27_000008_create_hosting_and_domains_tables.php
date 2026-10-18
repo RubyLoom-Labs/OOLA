@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('hosting_domains', function (Blueprint $table) {
             $table->id();
             $table->string('domain_name');
-            $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('customer_id');
             $table->foreignId('contact_id')->nullable()->constrained()->nullOnDelete();
 
             $table->string('provider')->nullable(); // GoDaddy, Namecheap, Cloudflare, etc.
@@ -37,7 +37,7 @@ return new class extends Migration
         Schema::create('hosting_servers', function (Blueprint $table) {
             $table->id();
             $table->string('server_name');
-            $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('customer_id')->nullable();
             $table->string('purpose')->nullable(); // Production, Staging, Backup, Email
             $table->string('provider')->nullable(); // AWS, DigitalOcean, Hetzner, Linode
             $table->string('ip_address')->nullable();
@@ -66,7 +66,7 @@ return new class extends Migration
         Schema::create('hosting_services', function (Blueprint $table) {
             $table->id();
             $table->string('service_type'); // Shared Hosting, VPS, Dedicated, SSL, Google Workspace, Microsoft 365
-            $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('customer_id');
             $table->string('provider')->nullable();
             $table->decimal('cost_price', 15, 2)->default(0);
             $table->decimal('selling_price', 15, 2)->default(0);

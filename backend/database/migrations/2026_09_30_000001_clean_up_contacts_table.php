@@ -15,7 +15,7 @@ return new class extends Migration
 
         Schema::table('contacts', function (Blueprint $table) {
             if (! Schema::hasColumn('contacts', 'company_id')) {
-                $table->foreignId('company_id')->nullable()->after('id')->constrained('customers')->nullOnDelete();
+                $table->unsignedBigInteger('company_id')->nullable()->after('id');
             }
             if (! Schema::hasColumn('contacts', 'company')) {
                 $table->string('company')->nullable()->after('company_id');

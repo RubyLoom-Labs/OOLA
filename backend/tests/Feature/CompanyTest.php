@@ -7,6 +7,8 @@ use App\Models\CompanySize;
 use App\Models\CompanyType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CompanyTest extends TestCase
@@ -244,5 +246,132 @@ class CompanyTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonPath('data.0.company_name', 'Searchable Phones Ltd')
             ->assertJsonPath('data.0.phone_number', '+94 71 555 4321');
+    }
+
+    public function test_can_get_company_by_id(): void
+    {
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $type = CompanyType::first();
+        $size = CompanySize::first();
+
+        $company = Company::create([
+            'company_name' => 'Acme Corporation',
+            'company_type_id' => $type->id,
+            'company_size_id' => $size->id,
+            'email' => 'contact@acmewide.com',
+            'phone_number' => '+1 555 0199',
+            'industry' => 'Manufacturing',
+            'city' => 'Metropolis',
+            'status' => true,
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/companies/{$company->id}");
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    'id',
+                    'company_code',
+                    'company_name',
+                    'company_type_id',
+                    'company_type' => ['id', 'name'],
+                    'company_size_id',
+                    'company_size' => ['id', 'name'],
+                    'email',
+                    'phone_number',
+                    'industry',
+                    'status',
+                    'city',
+                    'contacts',
+                    'created_at',
+                    'updated_at',
+                ],
+            ])
+            ->assertJsonPath('data.id', $company->id)
+            ->assertJsonPath('data.company_name', 'Acme Corporation')
+            ->assertJsonPath('data.email', 'contact@acmewide.com');
+    }
+
+    public function test_get_by_id_returns_404_when_company_does_not_exist_or_is_deleted(): void
+    {
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $type = CompanyType::first();
+
+        $response = $this->actingAs($admin, 'sanctum')->getJson('/api/v1/companies/999999');
+        $response->assertStatus(404);
+
+        $deletedCompany = Company::create([
+            'company_name' => 'Hidden Ghost Co',
+            'company_type_id' => $type->id,
+            'email' => 'ghost@hidden.com',
+        ]);
+        $deletedCompany->logicalDelete();
+
+        $deletedResponse = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/companies/{$deletedCompany->id}");
+        $deletedResponse->assertStatus(404);
+    }
+
+    public function test_company_logo_attribute_upload_and_lifecycle(): void
+    {
+        Storage::fake('public');
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $type = CompanyType::first();
+
+        // 1. Create company with an uploaded logo file
+        $file = UploadedFile::fake()->image('company_brand.png', 400, 400);
+
+        $createResponse = $this->actingAs($admin, 'sanctum')->post('/api/v1/companies', [
+            'company_name' => 'Logo Brand Tech',
+            'company_type_id' => $type->id,
+            'email' => 'brand@logotech.com',
+            'logo' => $file,
+        ], ['Accept' => 'application/json']);
+
+        $createResponse->assertStatus(201)
+            ->assertJsonStructure([
+                'data' => [
+                    'id',
+                    'company_name',
+                    'logo',
+                    'logo_url',
+                ],
+            ]);
+
+        $logoPath = $createResponse->json('data.logo');
+        $logoUrl = $createResponse->json('data.logo_url');
+        $companyId = $createResponse->json('data.id');
+
+        $this->assertNotNull($logoPath);
+        $this->assertNotNull($logoUrl);
+        Storage::disk('public')->assertExists($logoPath);
+
+        // 2. Get by ID returns logo and logo_url
+        $showResponse = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/companies/{$companyId}");
+        $showResponse->assertStatus(200)
+            ->assertJsonPath('data.logo', $logoPath)
+            ->assertJsonPath('data.logo_url', $logoUrl);
+
+        // 3. Update with a new base64 image replaces the old logo
+        $base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+        $updateResponse = $this->actingAs($admin, 'sanctum')->putJson("/api/v1/companies/{$companyId}", [
+            'logo' => $base64Image,
+        ]);
+
+        $updateResponse->assertStatus(200);
+        $newLogoPath = $updateResponse->json('data.logo');
+        $this->assertNotEquals($logoPath, $newLogoPath);
+        Storage::disk('public')->assertMissing($logoPath);
+        Storage::disk('public')->assertExists($newLogoPath);
+
+        // 4. Update with null clears logo
+        $clearResponse = $this->actingAs($admin, 'sanctum')->putJson("/api/v1/companies/{$companyId}", [
+            'logo' => null,
+        ]);
+        $clearResponse->assertStatus(200)
+            ->assertJsonPath('data.logo', null)
+            ->assertJsonPath('data.logo_url', null);
+
+        Storage::disk('public')->assertMissing($newLogoPath);
     }
 }

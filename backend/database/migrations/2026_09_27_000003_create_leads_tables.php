@@ -36,7 +36,7 @@ return new class extends Migration
             $table->string('requirement_name')->nullable();
             $table->longText('requirement_details')->nullable();
 
-            $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('customer_id')->nullable();
             $table->foreignId('contact_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('lead_source_id')->nullable()->constrained('lead_sources')->nullOnDelete();
             $table->foreignId('lead_stage_id')->nullable()->constrained('lead_stages')->nullOnDelete();

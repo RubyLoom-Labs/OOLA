@@ -20,7 +20,7 @@ return new class extends Migration
             $table->integer('reminder_before_minutes')->default(30);
 
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('customer_id')->nullable();
             $table->foreignId('lead_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('project_id')->nullable()->constrained()->nullOnDelete();
 

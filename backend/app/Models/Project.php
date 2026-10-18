@@ -48,9 +48,103 @@ class Project extends BaseModel
         'is_delete' => 'boolean',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (Project $project) {
+            if (empty($project->project_code)) {
+                $project->project_code = static::generateProjectCode($project->customer_id);
+            }
+        });
+    }
+
+    /**
+     * Generate project code:
+     * Starts with PROJ, followed by companyCode without 'C' character,
+     * followed by sequential project number for that company (1, 2, ...).
+     * Example: PROJO0000011, PROJO0000012, PROJO0000021.
+     */
+    public static function generateProjectCode(int|string|Company|null $company = null): string
+    {
+        $companyCode = null;
+        $companyId = null;
+
+        if ($company instanceof Company) {
+            $companyCode = $company->company_code;
+            $companyId = $company->id;
+        } elseif (! empty($company)) {
+            if (is_numeric($company)) {
+                $companyModel = Company::find($company);
+                if ($companyModel) {
+                    $companyCode = $companyModel->company_code;
+                    $companyId = $companyModel->id;
+                }
+            } elseif (is_string($company)) {
+                if (str_starts_with(strtoupper($company), 'CO')) {
+                    $companyCode = $company;
+                } else {
+                    $companyModel = Company::find($company);
+                    if ($companyModel) {
+                        $companyCode = $companyModel->company_code;
+                        $companyId = $companyModel->id;
+                    }
+                }
+            }
+        }
+
+        if (empty($companyCode)) {
+            $fallbackCompany = Company::orderBy('id', 'asc')->first();
+            $companyCode = $fallbackCompany?->company_code ?? 'CO000001';
+            $companyId = $fallbackCompany?->id;
+        }
+
+        // Remove 'C' character from company code (e.g., CO000001 -> O000001)
+        $cleanCompanyCode = str_ireplace('C', '', $companyCode);
+
+        $prefix = 'PROJ'.$cleanCompanyCode;
+
+        // Find the maximum project sequence number for this prefix
+        $maxNumber = 0;
+
+        $existingCodes = static::withTrashed()
+            ->where(function ($query) use ($prefix, $companyId) {
+                $query->where('project_code', 'like', "{$prefix}%");
+                if ($companyId) {
+                    $query->orWhere('customer_id', $companyId);
+                }
+            })
+            ->pluck('project_code');
+
+        foreach ($existingCodes as $existingCode) {
+            if (preg_match('/^'.preg_quote($prefix, '/').'(\d+)$/', $existingCode, $matches)) {
+                $num = (int) $matches[1];
+                if ($num > $maxNumber) {
+                    $maxNumber = $num;
+                }
+            }
+        }
+
+        $nextNumber = $maxNumber + 1;
+
+        // Ensure uniqueness loop
+        do {
+            $code = $prefix.$nextNumber;
+            $exists = static::withTrashed()->where('project_code', $code)->exists();
+            if ($exists) {
+                $nextNumber++;
+            }
+        } while ($exists);
+
+        return $code;
+    }
+
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Company::class, 'customer_id');
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'customer_id');
     }
 
     public function contact(): BelongsTo

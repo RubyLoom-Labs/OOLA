@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ContactController extends Controller
 {
@@ -107,12 +108,59 @@ class ContactController extends Controller
     }
 
     /**
+     * Retrieve active contacts (status = 1 and is_delete = 0) id and names by company ID.
+     */
+    public function byCompany(Request $request, int $companyId): JsonResponse
+    {
+        $contacts = Contact::where('company_id', $companyId)
+            ->where(function ($q) {
+                $q->where('status', true)
+                    ->orWhere('status', 1)
+                    ->orWhere('status', '1')
+                    ->orWhere('status', 'Active');
+            })
+            ->where('is_delete', false)
+            ->orderBy('first_name', 'asc')
+            ->orderBy('last_name', 'asc')
+            ->get();
+
+        return response()->json([
+            'data' => $contacts->map(function (Contact $c) {
+                $fullName = trim("{$c->first_name} {$c->last_name}");
+                $name = ! empty($fullName) ? $fullName : ($c->company ?? "Contact #{$c->id}");
+
+                return [
+                    'id' => $c->id,
+                    'name' => $name,
+                    'full_name' => $name,
+                    'first_name' => $c->first_name,
+                    'last_name' => $c->last_name,
+                    'company_id' => $c->company_id,
+                    'designation' => $c->designation,
+                    'email' => $c->email,
+                    'status' => (int) ($c->status ? 1 : 0),
+                    'is_delete' => (int) ($c->is_delete ? 1 : 0),
+                ];
+            }),
+        ]);
+    }
+
+    /**
      * Store a newly created contact.
      */
     public function store(StoreContactRequest $request): JsonResponse
     {
         $validated = $request->validated();
         $payload = $this->normalizeContactData($validated);
+
+        if ($request->hasFile('avatar') || $request->filled('avatar')) {
+            $avatarPath = $this->handleAvatar($request);
+            if ($avatarPath !== null) {
+                $payload['avatar'] = $avatarPath;
+            }
+        } else {
+            unset($payload['avatar']);
+        }
 
         return DB::transaction(function () use ($payload) {
             $phoneNumbers = $payload['phone_numbers'] ?? [];
@@ -163,6 +211,13 @@ class ContactController extends Controller
     {
         $validated = $request->validated();
         $payload = $this->normalizeContactData($validated);
+
+        if ($request->hasFile('avatar') || $request->filled('avatar') || $request->exists('avatar')) {
+            $avatarPath = $this->handleAvatar($request, $contact);
+            $payload['avatar'] = $avatarPath;
+        } else {
+            unset($payload['avatar']);
+        }
 
         return DB::transaction(function () use ($contact, $payload) {
             $phoneNumbers = null;
@@ -412,6 +467,79 @@ class ContactController extends Controller
         }
         unset($data['customer_id']);
 
+        // Strip non-contact columns passed from frontend form payloads
+        unset($data['notes']);
+
+        // If phone is sent but phone_numbers is empty, map it
+        if (! empty($data['phone']) && empty($data['phone_numbers'])) {
+            $data['phone_numbers'] = [
+                [
+                    'phone_number' => $data['phone'],
+                    'country_code' => $data['phone_country_code'] ?? null,
+                    'is_primary' => true,
+                ],
+            ];
+        }
+        unset($data['phone'], $data['phone_country_code']);
+
         return $data;
+    }
+
+    /**
+     * Process avatar upload or base64 data URI and return stored relative file path.
+     */
+    protected function handleAvatar(Request $request, ?Contact $contact = null): ?string
+    {
+        // 1. Uploaded file
+        if ($request->hasFile('avatar')) {
+            if ($contact?->avatar && Storage::disk('public')->exists($contact->avatar)) {
+                Storage::disk('public')->delete($contact->avatar);
+            }
+
+            return $request->file('avatar')->store('contact_avatars', 'public');
+        }
+
+        // 2. Base64 data string (e.g. data:image/jpeg;base64,...)
+        $avatarInput = $request->input('avatar');
+        if (is_string($avatarInput) && preg_match('/^data:image\/(\w+);base64,/', $avatarInput, $matches)) {
+            $extension = strtolower($matches[1]);
+            if ($extension === 'jpeg') {
+                $extension = 'jpg';
+            }
+
+            $base64Data = substr($avatarInput, strpos($avatarInput, ',') + 1);
+            $decoded = base64_decode($base64Data);
+
+            if ($decoded !== false) {
+                if ($contact?->avatar && Storage::disk('public')->exists($contact->avatar)) {
+                    Storage::disk('public')->delete($contact->avatar);
+                }
+
+                $filename = 'contact_avatars/avatar_'.uniqid().'_'.time().'.'.$extension;
+                Storage::disk('public')->put($filename, $decoded);
+
+                return $filename;
+            }
+        }
+
+        // 3. Existing relative path or URL - keep as-is if provided
+        if (is_string($avatarInput) && ! empty($avatarInput)) {
+            if ($contact && ($avatarInput === $contact->avatar || str_ends_with($avatarInput, $contact->avatar))) {
+                return $contact->avatar;
+            }
+
+            return $avatarInput;
+        }
+
+        // 4. Explicitly cleared / null
+        if ($request->exists('avatar') && empty($avatarInput)) {
+            if ($contact?->avatar && Storage::disk('public')->exists($contact->avatar)) {
+                Storage::disk('public')->delete($contact->avatar);
+            }
+
+            return null;
+        }
+
+        return $contact?->avatar;
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -39,14 +40,75 @@ class Customer extends BaseModel
         'is_delete' => 'boolean',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (Customer $customer) {
+            if (empty($customer->customer_code) || ! preg_match('/^CUS\d{6}$/', $customer->customer_code)) {
+                $customer->customer_code = static::generateCustomerCode();
+            }
+            if ($customer->status === null) {
+                $customer->status = 'Active';
+            }
+        });
+
+        static::updating(function (Customer $customer) {
+            // Immutable: customer_code cannot be edited or updated once set
+            if ($customer->isDirty('customer_code')) {
+                $customer->customer_code = $customer->getOriginal('customer_code') ?: static::generateCustomerCode();
+            }
+        });
+    }
+
+    /**
+     * Generate sequential customer code in ascending order starting with CUS000001.
+     */
+    public static function generateCustomerCode(): string
+    {
+        $codes = static::withoutGlobalScopes()
+            ->where('customer_code', 'like', 'CUS%')
+            ->pluck('customer_code');
+
+        $maxNumber = 0;
+        foreach ($codes as $code) {
+            if (preg_match('/^CUS(\d+)$/', $code, $matches)) {
+                $num = (int) $matches[1];
+                if ($num > $maxNumber) {
+                    $maxNumber = $num;
+                }
+            }
+        }
+
+        $nextNumber = $maxNumber + 1;
+
+        do {
+            $code = sprintf('CUS%06d', $nextNumber);
+            $exists = static::withoutGlobalScopes()->where('customer_code', $code)->exists();
+            if ($exists) {
+                $nextNumber++;
+            }
+        } while ($exists);
+
+        return $code;
+    }
+
+    /**
+     * Retrieve the model for a bound value by id or customer_code.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return $this->where($field ?? 'id', $value)
+            ->orWhere('customer_code', $value)
+            ->firstOrFail();
+    }
+
     public function contacts(): HasMany
     {
         return $this->hasMany(Contact::class, 'company_id');
     }
 
-    public function primaryContact()
+    public function primaryContact(): HasOne
     {
-        return $this->hasOne(Contact::class)->where('is_primary', true);
+        return $this->hasOne(Contact::class, 'company_id');
     }
 
     public function phoneNumbers(): HasManyThrough

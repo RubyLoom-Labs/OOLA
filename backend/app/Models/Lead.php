@@ -43,7 +43,12 @@ class Lead extends BaseModel
 
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Company::class, 'customer_id');
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'customer_id');
     }
 
     public function contact(): BelongsTo

@@ -28,6 +28,8 @@ class ContactResource extends JsonResource
             'full_name' => $this->full_name,
             'email' => $this->email,
             'designation' => $this->designation,
+            'avatar' => $this->avatar,
+            'avatar_url' => $this->avatar_url,
             'address' => $this->address,
             'birthday' => $this->birthday?->format('Y-m-d'),
             'status' => (bool) ($this->status ?? true),

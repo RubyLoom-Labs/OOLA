@@ -14,7 +14,7 @@ class StoreContactRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'company_id' => ['nullable', 'integer', 'exists:customers,id'],
+            'company_id' => ['nullable', 'integer', 'exists:companies,id'],
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'company' => ['nullable', 'string', 'max:255'],
             'company_name' => ['nullable', 'string', 'max:255'],
@@ -22,6 +22,10 @@ class StoreContactRequest extends FormRequest
             'last_name' => ['nullable', 'string', 'max:100'],
             'designation' => ['nullable', 'string', 'max:100'],
             'email' => ['nullable', 'email', 'max:255'],
+            'avatar' => ['nullable'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'phone_country_code' => ['nullable', 'string', 'max:20'],
+            'notes' => ['nullable', 'string'],
             'address' => ['nullable', 'string'],
             'birthday' => ['nullable', 'date'],
             'status' => ['nullable', 'boolean'],

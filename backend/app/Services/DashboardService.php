@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\ActivityLog;
 use App\Models\CalendarEvent;
-use App\Models\Customer;
+use App\Models\Company;
 use App\Models\Lead;
 use App\Models\LeadStage;
 use App\Models\Payment;
@@ -24,7 +24,7 @@ class DashboardService
         $pendingPayments = (float) Payment::where('status', 'Pending')->sum('outstanding_amount');
 
         $activeProjects = Project::whereIn('status', ['In Progress', 'Planning'])->count();
-        $totalCustomers = Customer::count();
+        $totalCustomers = Company::count();
 
         return [
             'total_leads' => $totalLeads,

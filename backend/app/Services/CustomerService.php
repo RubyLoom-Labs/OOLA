@@ -38,9 +38,9 @@ class CustomerService
     public function createCustomer(array $data): Customer
     {
         return DB::transaction(function () use ($data) {
-            if (empty($data['customer_code'])) {
-                $data['customer_code'] = 'CUST-'.strtoupper(uniqid());
-            }
+            // Enforce customer_code is always generated sequentially as CUS000001 format
+            unset($data['customer_code']);
+            $data['customer_code'] = Customer::generateCustomerCode();
 
             $phoneNumbers = $data['phone_numbers'] ?? [];
             unset($data['phone_numbers']);
@@ -60,6 +60,7 @@ class CustomerService
     public function updateCustomer(Customer $customer, array $data): Customer
     {
         return DB::transaction(function () use ($customer, $data) {
+            unset($data['customer_code']); // Prevent updating customer code
             $phoneNumbers = null;
             if (array_key_exists('phone_numbers', $data)) {
                 $phoneNumbers = $data['phone_numbers'];

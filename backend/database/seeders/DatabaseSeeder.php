@@ -12,7 +12,6 @@ use App\Models\Contact;
 use App\Models\ContactPhoneNumber;
 use App\Models\ContactSite;
 use App\Models\CrmNotification;
-use App\Models\Customer;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\EmailTemplate;
@@ -245,26 +244,10 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $customer = Customer::firstOrCreate(
-            ['company_name' => 'Apex Global Logistics'],
-            [
-                'customer_code' => 'CUST-001',
-                'company_type' => 'Private Ltd',
-                'designation' => 'Logistics & Supply Chain',
-                'email' => 'contact@apexlogistics.com',
-                'phone' => '+94 11 234 5678',
-                'website' => 'https://apexlogistics.com',
-                'address' => '45 Colombo Business Tower, Galle Road',
-                'city' => 'Colombo',
-                'country' => 'Sri Lanka',
-                'status' => 'Active',
-            ]
-        );
-
         $contact = Contact::firstOrCreate(
-            ['company_id' => $customer->id, 'email' => 'sarah.c@apexlogistics.com'],
+            ['company_id' => $company->id, 'email' => 'sarah.c@apexlogistics.com'],
             [
-                'company' => $customer->company_name,
+                'company' => $company->company_name,
                 'first_name' => 'Sarah',
                 'last_name' => 'Connor',
                 'designation' => 'Chief Operations Officer',
@@ -293,7 +276,7 @@ class DatabaseSeeder extends Seeder
                 'lead_code' => 'LEAD-2026-001',
                 'requirement_name' => 'Full Custom Logistics ERP & Fleet Tracking Web Platform',
                 'requirement_details' => 'End-to-end web portal for cargo tracking, multi-currency invoicing, client self-service, and driver mobile API integration.',
-                'customer_id' => $customer->id,
+                'customer_id' => $company->id,
                 'contact_id' => $contact->id,
                 'lead_source_id' => $createdSources['referral']->id,
                 'lead_stage_id' => $createdLeadStages['proposal']->id,
@@ -317,9 +300,9 @@ class DatabaseSeeder extends Seeder
         $project = Project::firstOrCreate(
             ['project_title' => 'Apex Logistics Cloud Migration & Portal'],
             [
-                'project_code' => 'PRJ-2026-001',
+                'project_code' => 'PROJO0000011',
                 'description' => 'Delivery of high-performance client portal with automated bill generation and cargo tracking.',
-                'customer_id' => $customer->id,
+                'customer_id' => $company->id,
                 'lead_id' => $lead->id,
                 'project_manager_id' => $admin->id,
                 'stage_id' => $createdProjectStages['in-progress']->id,
@@ -409,7 +392,7 @@ class DatabaseSeeder extends Seeder
             ['quotation_number' => 'QUO-2026-0089'],
             [
                 'title' => 'Web App Development & Dedicated Cloud Infrastructure',
-                'customer_id' => $customer->id,
+                'customer_id' => $company->id,
                 'lead_id' => $lead->id,
                 'project_id' => $project->id,
                 'template_id' => $template->id,
@@ -462,7 +445,7 @@ class DatabaseSeeder extends Seeder
             ['payment_code' => 'PAY-2026-001'],
             [
                 'invoice_number' => 'INV-2026-0045',
-                'customer_id' => $customer->id,
+                'customer_id' => $company->id,
                 'project_id' => $project->id,
                 'quotation_id' => $quotation->id,
                 'project_amount' => 1401250.00,
@@ -497,7 +480,7 @@ class DatabaseSeeder extends Seeder
         $domain = HostingDomain::firstOrCreate(
             ['domain_name' => 'apexlogistics.com'],
             [
-                'customer_id' => $customer->id,
+                'customer_id' => $company->id,
                 'contact_id' => $contact->id,
                 'provider' => 'Cloudflare Registry',
                 'purchase_date' => now()->subMonths(6),
@@ -512,7 +495,7 @@ class DatabaseSeeder extends Seeder
         HostingServer::firstOrCreate(
             ['server_name' => 'Apex-Production-Hetzner-01'],
             [
-                'customer_id' => $customer->id,
+                'customer_id' => $company->id,
                 'purpose' => 'Production Web & API Cluster',
                 'provider' => 'Hetzner Cloud',
                 'ip_address' => '159.69.142.88',
@@ -529,7 +512,7 @@ class DatabaseSeeder extends Seeder
         HostingService::firstOrCreate(
             ['service_type' => 'Google Workspace Business Starter'],
             [
-                'customer_id' => $customer->id,
+                'customer_id' => $company->id,
                 'provider' => 'Google Cloud',
                 'cost_price' => 18000.00,
                 'selling_price' => 24000.00,
@@ -548,7 +531,7 @@ class DatabaseSeeder extends Seeder
                 'event_type' => 'Meeting',
                 'location' => 'Google Meet',
                 'user_id' => $admin->id,
-                'customer_id' => $customer->id,
+                'customer_id' => $company->id,
                 'lead_id' => $lead->id,
                 'project_id' => $project->id,
             ]
@@ -603,7 +586,7 @@ class DatabaseSeeder extends Seeder
         CrmNotification::firstOrCreate(
             ['user_id' => $admin->id, 'title' => 'Payment Received for Apex Logistics'],
             [
-                'message' => 'LKR 700,000.00 advance payment was confirmed for Project PRJ-2026-001.',
+                'message' => 'LKR 700,000.00 advance payment was confirmed for Project PROJO0000011.',
                 'type' => 'payment',
                 'action_url' => '/projects/'.$project->id,
                 'is_read' => false,
@@ -612,7 +595,7 @@ class DatabaseSeeder extends Seeder
 
         ActivityLog::create([
             'action' => 'Project Initialized',
-            'description' => 'Project PRJ-2026-001 moved to In Progress state with commercial quotation QUO-2026-0089.',
+            'description' => 'Project PROJO0000011 moved to In Progress state with commercial quotation QUO-2026-0089.',
             'subject_type' => Project::class,
             'subject_id' => $project->id,
             'causer_id' => $admin->id,

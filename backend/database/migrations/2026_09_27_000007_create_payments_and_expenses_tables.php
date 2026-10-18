@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('payment_code')->unique()->nullable();
             $table->string('invoice_number')->nullable();
 
-            $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('customer_id');
             $table->foreignId('project_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('quotation_id')->nullable()->constrained()->nullOnDelete();
 

@@ -44,7 +44,7 @@ return new class extends Migration
             $table->string('quotation_number')->unique();
             $table->string('title')->nullable();
 
-            $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('customer_id');
             $table->foreignId('project_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('lead_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('template_id')->nullable()->constrained('quotation_templates')->nullOnDelete();

@@ -20,7 +20,9 @@ class ProjectService
                 $q->where('project_title', 'like', "%{$search}%")
                     ->orWhere('project_code', 'like', "%{$search}%")
                     ->orWhereHas('customer', function ($cq) use ($search) {
-                        $cq->where('company_name', 'like', "%{$search}%");
+                        $cq->where('company_name', 'like', "%{$search}%")
+                            ->orWhere('company_code', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
                     });
             });
         }
@@ -52,7 +54,8 @@ class ProjectService
     public function createProject(array $data, ?array $userIds = []): Project
     {
         if (empty($data['project_code'])) {
-            $data['project_code'] = 'PRJ-'.date('Y').'-'.strtoupper(substr(uniqid(), -4));
+            $companyId = $data['customer_id'] ?? $data['company_id'] ?? null;
+            $data['project_code'] = Project::generateProjectCode($companyId);
         }
 
         $project = Project::create($data);

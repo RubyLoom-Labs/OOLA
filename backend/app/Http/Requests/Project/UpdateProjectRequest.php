@@ -11,12 +11,19 @@ class UpdateProjectRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('company_id') && ! $this->has('customer_id')) {
+            $this->merge(['customer_id' => $this->input('company_id')]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'project_title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'customer_id' => ['sometimes', 'required', 'exists:customers,id'],
+            'customer_id' => ['sometimes', 'required', 'exists:companies,id'],
             'lead_id' => ['nullable', 'exists:leads,id'],
             'project_manager_id' => ['nullable', 'exists:users,id'],
             'stage_id' => ['nullable', 'exists:project_stages,id'],
