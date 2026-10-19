@@ -3,7 +3,7 @@ import { useLocation, Link } from 'react-router-dom'
 import {
   LayoutDashboard,
   Users,
-  UserCircle,
+  Building2,
   FolderKanban,
   CheckSquare,
   Calendar,
@@ -34,8 +34,9 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Leads', icon: Users, path: '/leads' },
-  { label: 'Projects / Deals', icon: FolderKanban, path: '/projects' },
-  { label: 'Customers / Contacts', icon: UserCircle, path: '/contacts' },
+  { label: 'Companies', icon: Building2, path: '/companies' },
+  { label: 'Contacts', icon: Users, path: '/contacts' },
+  { label: 'Projects', icon: FolderKanban, path: '/projects' },
   { label: 'Tasks', icon: CheckSquare, path: '/tasks' },
   { label: 'Calendar', icon: Calendar, path: '/calendar' },
   { label: 'Communication Hub', icon: Mail, path: '/emails' },

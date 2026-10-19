@@ -54,9 +54,9 @@ export function validatePhone(rawNumber: string, dialCode: string): string | nul
 }
 
 export function validateEmail(email: string): string | null {
-  if (!email.trim()) return 'Email address is required'
-  const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/
-  if (!emailRegex.test(email.trim())) return 'Enter a valid email (e.g. name@company.com)'
+  if (!email || !email.trim()) return null
+  const emailRegex = /^[^\s@]+@[^\s@]+$/
+  if (!emailRegex.test(email.trim())) return 'Please enter a valid email address'
   return null
 }
 

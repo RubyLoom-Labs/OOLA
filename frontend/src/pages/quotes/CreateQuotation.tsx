@@ -103,7 +103,7 @@ export default function CreateQuotation() {
       <div className="page-header">
         <div className="page-header-left">
           <h1 className="page-title">Create Quotation</h1>
-          <p className="page-description">Create and send professional quotations to your customers.</p>
+          <p className="page-description">Create and send professional quotations to your companies.</p>
         </div>
         <div className="page-header-actions">
           <button className="btn btn-outline">
@@ -146,11 +146,11 @@ export default function CreateQuotation() {
                 </div>
               </div>
 
-              {/* To Customer */}
+              {/* To Company */}
               <div style={{ padding: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-gray-500)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                    To (Customer)
+                    To (Company)
                   </div>
                   <button type="button" className="card-section-edit-btn">
                     <Edit3 size={12} className="edit-btn-icon" />

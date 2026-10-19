@@ -90,7 +90,7 @@ export default function Login() {
               Your Complete Business Management Platform
             </h1>
             <p className="login-hero-description">
-              Manage leads, projects, customers, payments and more — all in one
+              Manage leads, projects, companies, payments and more — all in one
               place. Build stronger relationships, streamline your workflow and
               grow your business with OOLA CRM.
             </p>
@@ -154,7 +154,7 @@ export default function Login() {
                     <div className="mini-nav-item active">📊 Dashboard</div>
                     <div className="mini-nav-item">👥 Leads</div>
                     <div className="mini-nav-item">💼 Projects / Deals</div>
-                    <div className="mini-nav-item">👤 Customers / Contacts</div>
+                    <div className="mini-nav-item">🏢 Companies / Contacts</div>
                     <div className="mini-nav-item">📅 Calendar</div>
                     <div className="mini-nav-item">💳 Payments</div>
                   </div>

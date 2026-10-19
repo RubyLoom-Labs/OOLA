@@ -26,24 +26,6 @@ interface CreateCompanyModalProps {
   initialName?: string
 }
 
-const DEFAULT_TYPES: CompanyTypeItem[] = [
-  { id: 1, name: 'Corporate' },
-  { id: 2, name: 'SME' },
-  { id: 3, name: 'Startup' },
-  { id: 4, name: 'Enterprise' },
-  { id: 5, name: 'Non-Profit' },
-  { id: 6, name: 'Other' },
-]
-
-const DEFAULT_SIZES: CompanySizeItem[] = [
-  { id: 1, name: '1-10' },
-  { id: 2, name: '11-50' },
-  { id: 3, name: '51-200' },
-  { id: 4, name: '201-500' },
-  { id: 5, name: '501-1000' },
-  { id: 6, name: '1000+' },
-]
-
 export default function CreateCompanyModal({
   isOpen,
   onClose,
@@ -124,15 +106,9 @@ export default function CreateCompanyModal({
           }
         }
 
-        // Pre-select default type if none chosen
-        const typesPool = loadedTypes.length > 0 ? loadedTypes : DEFAULT_TYPES
-        const defaultType =
-          typesPool.find((t) => t.name.toLowerCase() === 'corporate') ||
-          typesPool.find((t) => t.name.toLowerCase() === 'customer') ||
-          typesPool[0]
-
-        if (defaultType) {
-          setCompanyTypeId((prev) => prev || String(defaultType.id))
+        // Pre-select default type from API response if none chosen
+        if (loadedTypes.length > 0) {
+          setCompanyTypeId((prev) => prev || String(loadedTypes[0].id))
         }
       } catch (err) {
         console.error('Failed to load company metadata:', err)
@@ -214,8 +190,8 @@ export default function CreateCompanyModal({
 
   if (!isOpen) return null
 
-  const availableTypes = companyTypes.length > 0 ? companyTypes : DEFAULT_TYPES
-  const availableSizes = companySizes.length > 0 ? companySizes : DEFAULT_SIZES
+  const availableTypes = companyTypes
+  const availableSizes = companySizes
 
   // Validation rules engine
   const validateField = (name: string, value: any): string => {
@@ -232,8 +208,8 @@ export default function CreateCompanyModal({
       case 'email':
         if (!value || !String(value).trim()) return 'Email Address is required.'
         if (String(value).trim().length > 255) return 'Email cannot exceed 255 characters.'
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim())) {
-          return 'Please enter a valid email address (e.g. hello@zenithtech.io).'
+        if (!/^[^\s@]+@[^\s@]+$/.test(String(value).trim())) {
+          return 'Please enter a valid email address.'
         }
         return ''
 
@@ -446,10 +422,6 @@ export default function CreateCompanyModal({
 
         if (phoneNumber.trim()) {
           formData.append('phone_number', phoneNumber.trim())
-          formData.append('phone', phoneNumber.trim())
-          formData.append('phone_numbers[0][phone_number]', phoneNumber.trim())
-          formData.append('phone_numbers[0][type]', 'Work')
-          formData.append('phone_numbers[0][is_primary]', '1')
         }
 
         if (industry.trim()) formData.append('industry', industry.trim())
@@ -475,10 +447,6 @@ export default function CreateCompanyModal({
           company_type_id: Number(companyTypeId),
           email: email.trim(),
           phone_number: phoneNumber.trim() || undefined,
-          phone: phoneNumber.trim() || undefined,
-          phone_numbers: phoneNumber.trim()
-            ? [{ phone_number: phoneNumber.trim(), type: 'Work', is_primary: true }]
-            : undefined,
           industry: industry.trim() || undefined,
           company_size_id: companySizeId ? Number(companySizeId) : undefined,
           status: status,
@@ -722,10 +690,9 @@ export default function CreateCompanyModal({
                   Company Name <span className="text-danger">*</span>
                 </label>
                 <input
-                  ref={(el) => (fieldRefs.current['company_name'] = el)}
+                  ref={(el) => { fieldRefs.current['company_name'] = el }}
                   type="text"
                   maxLength={255}
-                  required
                   className={`form-input form-input-sm ${
                     fieldErrors.company_name
                       ? 'input-error'
@@ -752,7 +719,7 @@ export default function CreateCompanyModal({
                   Company Type <span className="text-danger">*</span>
                 </label>
                 <select
-                  ref={(el) => (fieldRefs.current['company_type_id'] = el)}
+                  ref={(el) => { fieldRefs.current['company_type_id'] = el }}
                   className={`form-select form-input-sm w-full text-xs ${
                     fieldErrors.company_type_id
                       ? 'input-error'
@@ -788,7 +755,7 @@ export default function CreateCompanyModal({
               <div className="form-group">
                 <label className="form-label text-xs font-medium">Company Size</label>
                 <select
-                  ref={(el) => (fieldRefs.current['company_size_id'] = el)}
+                  ref={(el) => { fieldRefs.current['company_size_id'] = el }}
                   className="form-select form-input-sm w-full text-xs"
                   value={companySizeId}
                   onChange={(e) => setCompanySizeId(e.target.value)}
@@ -817,10 +784,9 @@ export default function CreateCompanyModal({
                   Email Address <span className="text-danger">*</span>
                 </label>
                 <input
-                  ref={(el) => (fieldRefs.current['email'] = el)}
+                  ref={(el) => { fieldRefs.current['email'] = el }}
                   type="email"
                   maxLength={255}
-                  required
                   className={`form-input form-input-sm ${
                     fieldErrors.email
                       ? 'input-error'
@@ -845,7 +811,7 @@ export default function CreateCompanyModal({
               <div className="form-group">
                 <label className="form-label text-xs font-medium">Phone Number</label>
                 <input
-                  ref={(el) => (fieldRefs.current['phone_number'] = el)}
+                  ref={(el) => { fieldRefs.current['phone_number'] = el }}
                   type="tel"
                   maxLength={50}
                   className={`form-input form-input-sm ${
@@ -870,7 +836,7 @@ export default function CreateCompanyModal({
               <div className="form-group">
                 <label className="form-label text-xs font-medium">Industry</label>
                 <input
-                  ref={(el) => (fieldRefs.current['industry'] = el)}
+                  ref={(el) => { fieldRefs.current['industry'] = el }}
                   type="text"
                   maxLength={100}
                   className={`form-input form-input-sm ${
@@ -893,7 +859,7 @@ export default function CreateCompanyModal({
               <div className="form-group">
                 <label className="form-label text-xs font-medium">Website</label>
                 <input
-                  ref={(el) => (fieldRefs.current['website'] = el)}
+                  ref={(el) => { fieldRefs.current['website'] = el }}
                   type="url"
                   maxLength={255}
                   className={`form-input form-input-sm ${
@@ -963,7 +929,7 @@ export default function CreateCompanyModal({
                 <div className="form-group">
                   <label className="form-label text-xs font-medium">Owner Name</label>
                   <input
-                    ref={(el) => (fieldRefs.current['owner_name'] = el)}
+                    ref={(el) => { fieldRefs.current['owner_name'] = el }}
                     type="text"
                     maxLength={255}
                     className={`form-input form-input-sm ${
@@ -986,7 +952,7 @@ export default function CreateCompanyModal({
                 <div className="form-group">
                   <label className="form-label text-xs font-medium">Owner Birthday</label>
                   <input
-                    ref={(el) => (fieldRefs.current['owner_birthday'] = el)}
+                    ref={(el) => { fieldRefs.current['owner_birthday'] = el }}
                     type="date"
                     className={`form-input form-input-sm ${
                       fieldErrors.owner_birthday ? 'input-error' : ''
@@ -1015,7 +981,7 @@ export default function CreateCompanyModal({
                 <div className="form-group col-span-2">
                   <label className="form-label text-xs font-medium">Address Line 1</label>
                   <input
-                    ref={(el) => (fieldRefs.current['address_line_1'] = el)}
+                    ref={(el) => { fieldRefs.current['address_line_1'] = el }}
                     type="text"
                     maxLength={255}
                     className={`form-input form-input-sm ${
@@ -1040,7 +1006,7 @@ export default function CreateCompanyModal({
                 <div className="form-group col-span-2">
                   <label className="form-label text-xs font-medium">Address Line 2</label>
                   <input
-                    ref={(el) => (fieldRefs.current['address_line_2'] = el)}
+                    ref={(el) => { fieldRefs.current['address_line_2'] = el }}
                     type="text"
                     maxLength={255}
                     className={`form-input form-input-sm ${
@@ -1065,7 +1031,7 @@ export default function CreateCompanyModal({
                 <div className="form-group">
                   <label className="form-label text-xs font-medium">City</label>
                   <input
-                    ref={(el) => (fieldRefs.current['city'] = el)}
+                    ref={(el) => { fieldRefs.current['city'] = el }}
                     type="text"
                     maxLength={100}
                     className={`form-input form-input-sm ${
@@ -1088,7 +1054,7 @@ export default function CreateCompanyModal({
                 <div className="form-group">
                   <label className="form-label text-xs font-medium">State / Province</label>
                   <input
-                    ref={(el) => (fieldRefs.current['state'] = el)}
+                    ref={(el) => { fieldRefs.current['state'] = el }}
                     type="text"
                     maxLength={100}
                     className={`form-input form-input-sm ${
@@ -1111,7 +1077,7 @@ export default function CreateCompanyModal({
                 <div className="form-group">
                   <label className="form-label text-xs font-medium">Postal Code</label>
                   <input
-                    ref={(el) => (fieldRefs.current['postal_code'] = el)}
+                    ref={(el) => { fieldRefs.current['postal_code'] = el }}
                     type="text"
                     maxLength={50}
                     className={`form-input form-input-sm ${
@@ -1134,7 +1100,7 @@ export default function CreateCompanyModal({
                 <div className="form-group">
                   <label className="form-label text-xs font-medium">Country</label>
                   <input
-                    ref={(el) => (fieldRefs.current['country'] = el)}
+                    ref={(el) => { fieldRefs.current['country'] = el }}
                     type="text"
                     maxLength={100}
                     className={`form-input form-input-sm ${

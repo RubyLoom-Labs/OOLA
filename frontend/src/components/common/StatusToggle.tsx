@@ -11,7 +11,7 @@ export interface StatusToggleProps {
   isEditing?: boolean
   /** Read-only mode flag */
   readOnly?: boolean
-  /** Label describing the field (e.g. 'Customer Status' or 'Status') */
+  /** Label describing the field (e.g. 'Company Status' or 'Status') */
   label?: string
   /** Size variant */
   size?: 'sm' | 'md' | 'lg'

@@ -18,7 +18,8 @@ type ViewMode = 'kanban' | 'list'
 interface Lead {
   id: number
   title: string
-  customer: string
+  company: string
+  customer?: string
   budget: string
   priority: 'High' | 'Medium' | 'Low'
   assignee: string
@@ -29,14 +30,14 @@ interface Lead {
 }
 
 const leadsData: Lead[] = [
-  { id: 1, title: 'Website Redesign', customer: 'TechNova Inc.', budget: '$15,000', priority: 'High', assignee: 'John Doe', assigneeInitials: 'JD', nextStep: 'Send Proposal', daysInStage: 2, stage: 'New' },
-  { id: 2, title: 'Mobile App Development', customer: 'StartUp Labs', budget: '$45,000', priority: 'High', assignee: 'Mary Jane', assigneeInitials: 'MJ', nextStep: 'Schedule Demo', daysInStage: 1, stage: 'New' },
-  { id: 3, title: 'E-commerce Platform', customer: 'RetailMax Corp.', budget: '$28,000', priority: 'Medium', assignee: 'John Doe', assigneeInitials: 'JD', nextStep: 'Requirement Meeting', daysInStage: 5, stage: 'Contacted' },
-  { id: 4, title: 'CRM Integration', customer: 'DataFlow Inc.', budget: '$12,000', priority: 'Low', assignee: 'Sarah Kim', assigneeInitials: 'SK', nextStep: 'Technical Review', daysInStage: 3, stage: 'Contacted' },
-  { id: 5, title: 'Cloud Migration', customer: 'Legacy Systems', budget: '$35,000', priority: 'High', assignee: 'Mary Jane', assigneeInitials: 'MJ', nextStep: 'Prepare Quotation', daysInStage: 7, stage: 'Qualified' },
-  { id: 6, title: 'AI Dashboard', customer: 'Analytics Pro', budget: '$22,000', priority: 'Medium', assignee: 'John Doe', assigneeInitials: 'JD', nextStep: 'Send Quotation', daysInStage: 4, stage: 'Proposal' },
-  { id: 7, title: 'Security Audit', customer: 'SecureNet LLC', budget: '$8,500', priority: 'Medium', assignee: 'Sarah Kim', assigneeInitials: 'SK', nextStep: 'Final Discussion', daysInStage: 2, stage: 'Negotiation' },
-  { id: 8, title: 'API Gateway', customer: 'MicroServ Tech', budget: '$18,000', priority: 'Low', assignee: 'David Park', assigneeInitials: 'DP', nextStep: 'Follow-up Call', daysInStage: 6, stage: 'Proposal' },
+  { id: 1, title: 'Website Redesign', company: 'TechNova Inc.', customer: 'TechNova Inc.', budget: '$15,000', priority: 'High', assignee: 'John Doe', assigneeInitials: 'JD', nextStep: 'Send Proposal', daysInStage: 2, stage: 'New' },
+  { id: 2, title: 'Mobile App Development', company: 'StartUp Labs', customer: 'StartUp Labs', budget: '$45,000', priority: 'High', assignee: 'Mary Jane', assigneeInitials: 'MJ', nextStep: 'Schedule Demo', daysInStage: 1, stage: 'New' },
+  { id: 3, title: 'E-commerce Platform', company: 'RetailMax Corp.', customer: 'RetailMax Corp.', budget: '$28,000', priority: 'Medium', assignee: 'John Doe', assigneeInitials: 'JD', nextStep: 'Requirement Meeting', daysInStage: 5, stage: 'Contacted' },
+  { id: 4, title: 'CRM Integration', company: 'DataFlow Inc.', customer: 'DataFlow Inc.', budget: '$12,000', priority: 'Low', assignee: 'Sarah Kim', assigneeInitials: 'SK', nextStep: 'Technical Review', daysInStage: 3, stage: 'Contacted' },
+  { id: 5, title: 'Cloud Migration', company: 'Legacy Systems', customer: 'Legacy Systems', budget: '$35,000', priority: 'High', assignee: 'Mary Jane', assigneeInitials: 'MJ', nextStep: 'Prepare Quotation', daysInStage: 7, stage: 'Qualified' },
+  { id: 6, title: 'AI Dashboard', company: 'Analytics Pro', customer: 'Analytics Pro', budget: '$22,000', priority: 'Medium', assignee: 'John Doe', assigneeInitials: 'JD', nextStep: 'Send Quotation', daysInStage: 4, stage: 'Proposal' },
+  { id: 7, title: 'Security Audit', company: 'SecureNet LLC', customer: 'SecureNet LLC', budget: '$8,500', priority: 'Medium', assignee: 'Sarah Kim', assigneeInitials: 'SK', nextStep: 'Final Discussion', daysInStage: 2, stage: 'Negotiation' },
+  { id: 8, title: 'API Gateway', company: 'MicroServ Tech', customer: 'MicroServ Tech', budget: '$18,000', priority: 'Low', assignee: 'David Park', assigneeInitials: 'DP', nextStep: 'Follow-up Call', daysInStage: 6, stage: 'Proposal' },
 ]
 
 const stages = [
@@ -66,7 +67,8 @@ export default function Leads() {
     return leadsData.filter(
       (l) =>
         l.title.toLowerCase().includes(q) ||
-        l.customer.toLowerCase().includes(q) ||
+        (l.company && l.company.toLowerCase().includes(q)) ||
+        (l.customer && l.customer.toLowerCase().includes(q)) ||
         l.assignee.toLowerCase().includes(q) ||
         l.stage.toLowerCase().includes(q)
     )
@@ -86,9 +88,9 @@ export default function Leads() {
       ),
     },
     {
-      key: 'customer',
-      header: 'CUSTOMER',
-      render: (lead) => capitalizeWords(lead.customer),
+      key: 'company',
+      header: 'COMPANY',
+      render: (lead) => capitalizeWords(lead.company || lead.customer || ''),
     },
     {
       key: 'stage',
@@ -266,7 +268,7 @@ export default function Leads() {
                     <div key={lead.id} className="kanban-card">
                       <div className="kanban-card-title">{lead.title}</div>
                       <div style={{ fontSize: 12, color: 'var(--color-gray-500)', marginBottom: 8 }}>
-                        {lead.customer}
+                        {lead.company || lead.customer}
                       </div>
                       <div
                         style={{

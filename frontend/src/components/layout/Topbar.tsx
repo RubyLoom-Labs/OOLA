@@ -11,7 +11,7 @@ import {
   Shield,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { capitalizeWords } from '@/lib/utils'
+import { capitalizeWords, getAvatarUrl } from '@/lib/utils'
 
 interface TopbarProps {
   onMenuClick: () => void
@@ -137,10 +137,10 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
             onClick={() => setShowUserMenu(!showUserMenu)}
           >
             <img
-              src={
-                user?.avatar ||
+              src={getAvatarUrl(
+                user?.avatar,
                 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'
-              }
+              )}
               alt={displayName}
               className="topbar-user-avatar-img"
             />

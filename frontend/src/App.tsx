@@ -6,7 +6,10 @@ import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import Leads from '@/pages/Leads'
 import Contacts from '@/pages/Contacts'
+import Companies from '@/pages/Companies'
 import CreateQuotation from '@/pages/quotes/CreateQuotation'
+import Projects from '@/pages/Projects'
+import ProjectWorkspace from '@/pages/ProjectWorkspace'
 import PlaceholderPage from '@/pages/PlaceholderPage'
 
 function App() {
@@ -22,13 +25,15 @@ function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/leads" element={<Leads />} />
+              <Route path="/companies" element={<Companies />} />
+              <Route path="/customers" element={<Navigate to="/companies" replace />} />
               <Route path="/contacts" element={<Contacts />} />
               <Route
                 path="/accounts"
                 element={
                   <PlaceholderPage
                     title="Accounts"
-                    description="Manage customer accounts and companies."
+                    description="Manage company accounts and organizations."
                     breadcrumb={[{ label: 'Accounts' }]}
                   />
                 }
@@ -43,16 +48,8 @@ function App() {
                   />
                 }
               />
-              <Route
-                path="/projects"
-                element={
-                  <PlaceholderPage
-                    title="Projects"
-                    description="Manage your project portfolio."
-                    breadcrumb={[{ label: 'Projects' }]}
-                  />
-                }
-              />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/projects/:id" element={<ProjectWorkspace />} />
               <Route
                 path="/tasks"
                 element={

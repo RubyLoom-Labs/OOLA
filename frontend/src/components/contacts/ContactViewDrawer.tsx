@@ -40,7 +40,7 @@ import StatusToggle from '@/components/common/StatusToggle'
 import ConfirmationModal from '@/components/common/ConfirmationModal'
 import CompanySelect from '@/components/companies/CompanySelect'
 import PhoneInput, { validateEmail } from '@/components/common/PhoneInput'
-import { capitalizeWords } from '@/lib/utils'
+import { capitalizeWords, getAvatarUrl } from '@/lib/utils'
 
 interface ContactViewDrawerProps {
   contact: Contact | null
@@ -281,10 +281,7 @@ export default function ContactViewDrawer({
     setDateOfBirth(c.date_of_birth || c.birthday || '')
     setStatus(c.status === 'Inactive' ? 'Inactive' : 'Active')
     setNotes(c.notes || '')
-    setAvatar(
-      c.avatar ||
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-    )
+    setAvatar(getAvatarUrl(c.avatar))
   }
 
   // Trigger GET /api/v1/contacts/{id} when drawer opens
@@ -487,12 +484,7 @@ export default function ContactViewDrawer({
           <div className="cvd-avatar-wrap">
             <img
               className="cvd-avatar"
-              src={
-                isEditing
-                  ? avatar
-                  : localContact.avatar ||
-                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-              }
+              src={getAvatarUrl(isEditing ? avatar : localContact.avatar)}
               alt={contactFullName}
             />
             {isEditing && (
@@ -522,7 +514,6 @@ export default function ContactViewDrawer({
               <div className="cvd-name-edit-row">
                 <input
                   type="text"
-                  required
                   className="form-input form-input-sm"
                   placeholder="First Name"
                   value={firstName}
@@ -531,7 +522,6 @@ export default function ContactViewDrawer({
                 />
                 <input
                   type="text"
-                  required
                   className="form-input form-input-sm"
                   placeholder="Last Name"
                   value={lastName}
@@ -703,17 +693,17 @@ export default function ContactViewDrawer({
                   /* ── EDIT FORM ── */
                   <div className="space-y-3.5 pt-1">
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="form-group">
+                      <div className="form-group min-w-0">
                         <label className="form-label text-xs">Designation / Role</label>
                         <input
                           type="text"
-                          className="form-input form-input-sm"
+                          className="form-input form-input-sm min-w-0"
                           placeholder="e.g. Chief Operations Officer"
                           value={designation}
                           onChange={(e) => setDesignation(e.target.value)}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group min-w-0">
                         <label className="form-label text-xs">
                           Associated Company <span className="text-danger">*</span>
                         </label>
@@ -722,7 +712,6 @@ export default function ContactViewDrawer({
                           companyName={companyName}
                           onChange={handleCompanyChange}
                           placeholder="Select active company..."
-                          required
                         />
                       </div>
                     </div>
@@ -733,7 +722,6 @@ export default function ContactViewDrawer({
                       </label>
                       <input
                         type="email"
-                        required
                         className={`form-input form-input-sm ${touched.email && emailError ? 'input-error' : touched.email && !emailError ? 'input-valid' : ''}`}
                         placeholder="sarah.c@apexlogistics.com"
                         value={email}
@@ -837,11 +825,11 @@ export default function ContactViewDrawer({
                                 </label>
                               </div>
 
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
                                 {/* Notes input */}
                                 <input
                                   type="text"
-                                  className="form-input form-input-sm text-xs py-0.5 px-2 w-36 sm:w-44 bg-white border-slate-200"
+                                  className="form-input form-input-sm text-xs py-0.5 px-2 w-32 sm:w-40 min-w-0 bg-white border-slate-200"
                                   placeholder="Note (e.g. Executive Hotline)"
                                   value={pItem.notes || ''}
                                   onChange={(e) => handlePhoneNotesChange(idx, e.target.value)}
@@ -956,16 +944,7 @@ export default function ContactViewDrawer({
                       </div>
                     </div>
 
-                    <div className="form-group">
-                      <label className="form-label text-xs">Notes & Remarks</label>
-                      <textarea
-                        rows={3}
-                        className="form-input form-input-sm resize-none"
-                        placeholder="Add background notes or client context..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                      />
-                    </div>
+
                   </div>
                 ) : (
                   /* ── READ-ONLY VIEW ── */

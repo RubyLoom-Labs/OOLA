@@ -939,6 +939,18 @@ body {
   font-size: 13px;
 }
 
+textarea.form-input,
+textarea.form-input-sm,
+.form-textarea {
+  height: auto;
+  min-height: 110px;
+  padding: 10px 12px;
+  line-height: 1.5;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  resize: vertical;
+}
+
 .form-select {
   width: 100%;
   height: 38px;
@@ -2640,7 +2652,7 @@ body {
   align-items: center;
   gap: 12px;
   flex: 1;
-  max-width: 580px;
+  flex-wrap: wrap;
 }
 
 .contacts-status-select {
@@ -2649,10 +2661,14 @@ body {
   font-size: 13px;
   font-weight: 500;
   background-color: white;
+  flex-shrink: 0;
 }
 
 .contacts-search-box {
   position: relative;
+  width: 420px;
+  max-width: 440px;
+  min-width: 280px;
   flex: 1;
 }
 
@@ -3094,10 +3110,16 @@ body {
   color: var(--color-gray-400);
 }
 
-/* ── Contacts Grid View ── */
+/* ── Contacts & Projects Grid View ── */
 .contacts-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.projects-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
   gap: 16px;
 }
 
@@ -3663,11 +3685,19 @@ body {
   flex-wrap: wrap;
 }
 
-/* ── Contact Form Drawer (Screenshot 2) ── */
+/* ── Contact Form Drawer ── */
+.contact-form-drawer .slide-drawer-body {
+  padding: 0;
+}
+
 .contact-form-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+
+.contact-form-body {
+  padding: 20px 24px;
 }
 
 .contact-form-header {
@@ -3730,14 +3760,16 @@ body {
 
 .contact-form-grid-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 24px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 768px) {
   .contact-form-grid-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -3745,6 +3777,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .contact-form-card {
@@ -3755,6 +3790,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .contact-form-section-title {
@@ -3767,18 +3805,33 @@ body {
   border-bottom: 1px solid var(--color-gray-100);
   padding-bottom: 8px;
   margin-bottom: 4px;
+  min-width: 0;
 }
 
 .contact-form-two-col {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .form-label {
@@ -4741,6 +4794,7 @@ body {
 .cvd-hero-info {
   flex: 1;
   min-width: 0;
+  padding-right: 36px;
 }
 
 .cvd-name-row {
@@ -4847,6 +4901,18 @@ body {
   padding: 10px 24px;
   background: #fffbeb;
   border-bottom: 1px solid #fde68a;
+}
+
+.contact-edit-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 2px 9px;
+  display: inline-block;
 }
 
 /* ── Validation Error ── */

@@ -30,7 +30,7 @@ export default function CompanySelect({
   companyName,
   onChange,
   placeholder = 'Select or search company...',
-  required = false,
+  required: _required = false,
   disabled = false,
   className = '',
 }: CompanySelectProps) {
@@ -157,11 +157,11 @@ export default function CompanySelect({
   }
 
   return (
-    <div className={`relative ${className}`} ref={containerRef}>
+    <div className={`relative w-full min-w-0 ${className}`} ref={containerRef}>
       {/* Trigger Box */}
       <div
         onClick={handleToggle}
-        className={`form-input flex items-center justify-between cursor-pointer select-none transition-all ${
+        className={`form-input flex items-center justify-between cursor-pointer select-none transition-all w-full min-w-0 ${
           isOpen ? 'ring-2 ring-primary-500/20 border-primary-500' : ''
         } ${disabled ? 'opacity-60 cursor-not-allowed bg-gray-50' : 'bg-white'}`}
         style={{
@@ -169,11 +169,11 @@ export default function CompanySelect({
           padding: '6px 12px',
         }}
       >
-        <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
+        <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2 min-w-0">
           <Building2 size={15} className="text-gray-400 flex-shrink-0" />
           {selectedCompany ? (
-            <div className="flex items-center gap-2 truncate">
-              <span className="font-medium text-gray-900 text-sm truncate">
+            <div className="flex items-center gap-2 truncate min-w-0 flex-1">
+              <span className="font-medium text-gray-900 text-sm truncate min-w-0">
                 {capitalizeWords(selectedCompany.company_name)}
               </span>
               {selectedCompany.company_code && (
@@ -193,7 +193,7 @@ export default function CompanySelect({
               )}
             </div>
           ) : (
-            <span className="text-gray-400 text-sm">{placeholder}</span>
+            <span className="text-gray-400 text-sm truncate min-w-0">{placeholder}</span>
           )}
         </div>
 
@@ -215,25 +215,7 @@ export default function CompanySelect({
         </div>
       </div>
 
-      {/* Hidden input for HTML form validation */}
-      {required && (
-        <input
-          type="text"
-          required
-          tabIndex={-1}
-          value={selectedCompany ? selectedCompany.id : ''}
-          onChange={() => {}}
-          style={{
-            position: 'absolute',
-            opacity: 0,
-            pointerEvents: 'none',
-            bottom: 0,
-            left: 10,
-            height: 1,
-            width: 1,
-          }}
-        />
-      )}
+
 
       {/* Dropdown Menu */}
       {isOpen && (

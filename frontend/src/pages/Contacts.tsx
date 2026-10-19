@@ -19,7 +19,7 @@ import Breadcrumb from '@/components/ui/Breadcrumb'
 import DataTable, { type Column } from '@/components/common/DataTable'
 import ActionDropdown from '@/components/common/ActionDropdown'
 import ConfirmationModal from '@/components/common/ConfirmationModal'
-import { capitalizeWords } from '@/lib/utils'
+import { capitalizeWords, getAvatarUrl } from '@/lib/utils'
 import ContactViewDrawer from '@/components/contacts/ContactViewDrawer'
 import ContactFormDrawer from '@/components/contacts/ContactFormDrawer'
 import {
@@ -275,10 +275,7 @@ export default function Contacts() {
         return (
           <div className="contact-name-cell">
             <img
-              src={
-                contact.avatar ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-              }
+              src={getAvatarUrl(contact.avatar)}
               alt={displayName}
               className="contact-table-avatar"
             />
@@ -399,13 +396,13 @@ export default function Contacts() {
       )}
 
       {/* Breadcrumb */}
-      <Breadcrumb items={[{ label: 'Customers / Contacts' }]} />
+      <Breadcrumb items={[{ label: 'Contacts' }]} />
 
       {/* Module Page Header */}
       <PageHeader
         icon={<Users size={24} />}
         title="Contacts"
-        description="Manage your customers and contacts. Create, edit, and connect them to leads, projects and deals."
+        description="Manage your companies and contacts. Create, edit, and connect them to leads, projects and deals."
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -569,10 +566,7 @@ export default function Contacts() {
               >
                 <div className="contact-grid-card-header">
                   <img
-                    src={
-                      contact.avatar ||
-                      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-                    }
+                    src={getAvatarUrl(contact.avatar)}
                     alt={displayName}
                     className="contact-grid-avatar"
                   />
