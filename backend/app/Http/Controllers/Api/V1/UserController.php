@@ -148,11 +148,7 @@ class UserController extends Controller
 
     public function resendInvite(int|string $id): JsonResponse
     {
-        $user = User::withoutGlobalScopes()->findOrFail($id);
-
-        if ((bool) $user->is_delete) {
-            return response()->json(['message' => 'Cannot send invitation to a deleted user.'], 422);
-        }
+        $user = User::findOrFail($id);
 
         $token = Str::random(64);
         DB::table('password_reset_tokens')->updateOrInsert(

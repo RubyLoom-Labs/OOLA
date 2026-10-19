@@ -12,10 +12,7 @@ class ProjectStatusResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'slug' => $this->slug,
-            'color' => $this->color,
-            'order_column' => (int) $this->order_column,
-            'is_completed' => (bool) $this->is_completed,
+            'order_column' => (int) ($this->order_column ?? 0),
             'is_delete' => (bool) $this->is_delete,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

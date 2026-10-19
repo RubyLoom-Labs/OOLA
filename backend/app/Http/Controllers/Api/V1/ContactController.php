@@ -108,44 +108,6 @@ class ContactController extends Controller
     }
 
     /**
-     * Retrieve active contacts (status = 1 and is_delete = 0) id and names by company ID.
-     */
-    public function byCompany(Request $request, int $companyId): JsonResponse
-    {
-        $contacts = Contact::where('company_id', $companyId)
-            ->where(function ($q) {
-                $q->where('status', true)
-                    ->orWhere('status', 1)
-                    ->orWhere('status', '1')
-                    ->orWhere('status', 'Active');
-            })
-            ->where('is_delete', false)
-            ->orderBy('first_name', 'asc')
-            ->orderBy('last_name', 'asc')
-            ->get();
-
-        return response()->json([
-            'data' => $contacts->map(function (Contact $c) {
-                $fullName = trim("{$c->first_name} {$c->last_name}");
-                $name = ! empty($fullName) ? $fullName : ($c->company ?? "Contact #{$c->id}");
-
-                return [
-                    'id' => $c->id,
-                    'name' => $name,
-                    'full_name' => $name,
-                    'first_name' => $c->first_name,
-                    'last_name' => $c->last_name,
-                    'company_id' => $c->company_id,
-                    'designation' => $c->designation,
-                    'email' => $c->email,
-                    'status' => (int) ($c->status ? 1 : 0),
-                    'is_delete' => (int) ($c->is_delete ? 1 : 0),
-                ];
-            }),
-        ]);
-    }
-
-    /**
      * Store a newly created contact.
      */
     public function store(StoreContactRequest $request): JsonResponse

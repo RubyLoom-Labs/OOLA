@@ -22,12 +22,11 @@ class AuthController extends Controller
 {
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::withoutGlobalScopes()
-            ->with('roles.permissions')
+        $user = User::with('roles.permissions')
             ->where('email', $request->email)
             ->first();
 
-        if (! $user || (bool) $user->is_delete || ! Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials do not match our records.'],
             ]);
@@ -56,9 +55,9 @@ class AuthController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        $user = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
+        $user = User::where('email', $validated['email'])->first();
 
-        if (! $user || (bool) $user->is_delete) {
+        if (! $user) {
             return response()->json([
                 'message' => 'If this email is registered in our system, a password reset link has been sent.',
             ]);
@@ -117,9 +116,9 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user = User::withoutGlobalScopes()->where('email', $request->email)->first();
+        $user = User::where('email', $request->email)->first();
 
-        if (! $user || (bool) $user->is_delete) {
+        if (! $user) {
             return response()->json([
                 'message' => 'User account not found or has been removed.',
             ], 404);

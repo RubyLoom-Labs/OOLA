@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\LeadStageController;
 use App\Http\Controllers\Api\V1\LeaveRequestController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\ProjectPriorityController;
 use App\Http\Controllers\Api\V1\ProjectStageController;
 use App\Http\Controllers\Api\V1\ProjectStatusController;
 use App\Http\Controllers\Api\V1\QuotationController;
@@ -84,16 +85,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/companies/next-code', [CompanyController::class, 'nextCode']);
         Route::get('/companies/lookup', [CompanyController::class, 'lookup']);
         Route::get('/companies/active-list', [CompanyController::class, 'lookup']);
-        Route::get('/companies/contacts', [CompanyController::class, 'contacts']);
         Route::post('/companies/{id}/restore', [CompanyController::class, 'restore']);
         Route::get('/companies/{id}/contacts', [CompanyController::class, 'contacts']);
-        Route::get('/companies/{id}/active-contacts', [CompanyController::class, 'contacts']);
         Route::apiResource('companies', CompanyController::class);
 
         // Customers (legacy compatibility) & Contacts & Phone Numbers
         Route::post('/customers/{id}/restore', [CustomerController::class, 'restore']);
         Route::apiResource('customers', CustomerController::class);
-        Route::get('/contacts/by-company/{companyId}', [ContactController::class, 'byCompany']);
         Route::post('/contacts/{id}/restore', [ContactController::class, 'restore']);
         Route::get('/contacts/{contact}/projects', [ContactController::class, 'projectsHistory']);
         Route::apiResource('contacts', ContactController::class);
@@ -108,17 +106,24 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('lead-stages', LeadStageController::class)->only(['index', 'store']);
         Route::get('/lead-sources', [LeadSourceController::class, 'index']);
 
-        // Projects, Stages & Statuses
+        // Projects, Stages, Statuses & Priorities
         Route::get('/projects/next-code', [ProjectController::class, 'nextCode']);
         Route::get('/projects/kanban', [ProjectController::class, 'kanban']);
         Route::get('/projects/statuses', [ProjectStatusController::class, 'index']);
         Route::get('/projects/delivery-statuses', [ProjectStatusController::class, 'deliveryStatuses']);
+        Route::get('/projects/priorities', [ProjectPriorityController::class, 'index']);
         Route::match(['post', 'put'], '/projects/{project}/stage', [ProjectController::class, 'updateStage']);
         Route::apiResource('projects', ProjectController::class);
 
         // Project Statuses (Active records where is_delete = 0)
         Route::get('/project-statuses/delivery', [ProjectStatusController::class, 'deliveryStatuses']);
         Route::apiResource('project-statuses', ProjectStatusController::class);
+
+        // Project Priorities (Active records where is_delete = 0)
+        Route::get('/project-priorities/names', [ProjectPriorityController::class, 'priorityNames']);
+        Route::apiResource('project-priorities', ProjectPriorityController::class);
+
+        // Project Stages (Kanban Pipeline)
         Route::get('/project-stages', [ProjectStageController::class, 'index']);
 
         // Tasks, Subtasks & Timers

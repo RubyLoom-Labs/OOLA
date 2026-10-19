@@ -153,21 +153,31 @@ class CompanyController extends Controller
     }
 
     /**
-     * Retrieve active contacts (status = 1 and is_delete = 0) id and names for a company.
-     * Accessible via GET /api/v1/companies/{id}/contacts or GET /api/v1/companies/contacts?company_id={id}
+     * Retrieve active contacts (status = 1 and is_delete = 0) for an active company (status = 1 and is_delete = 0).
+     * Accessible via GET /api/v1/companies/{id}/contacts
      */
-    public function contacts(Request $request, ?int $id = null): JsonResponse
+    public function contacts(int $id): JsonResponse
     {
-        $companyId = $id ?: (int) ($request->input('company_id') ?: $request->input('customer_id'));
+        // 1. First check: is this company status = 1 and is_delete = 0?
+        $company = Company::where('id', $id)
+            ->where(function ($q) {
+                $q->where('status', true)
+                    ->orWhere('status', 1)
+                    ->orWhere('status', '1')
+                    ->orWhere('status', 'Active');
+            })
+            ->where('is_delete', false)
+            ->first();
 
-        if (! $companyId) {
+        if (! $company) {
             return response()->json([
-                'message' => 'Company ID is required.',
+                'message' => 'Company not found or inactive.',
                 'data' => [],
-            ], 422);
+            ], 404);
         }
 
-        $contacts = Contact::where('company_id', $companyId)
+        // 2. If have company, only get that company relevant contacts status = 1 and is_delete = 0 contacts
+        $contacts = Contact::where('company_id', $company->id)
             ->where(function ($q) {
                 $q->where('status', true)
                     ->orWhere('status', 1)
@@ -193,8 +203,8 @@ class CompanyController extends Controller
                     'company_id' => $c->company_id,
                     'designation' => $c->designation,
                     'email' => $c->email,
-                    'status' => (int) ($c->status ? 1 : 0),
-                    'is_delete' => (int) ($c->is_delete ? 1 : 0),
+                    'status' => 1,
+                    'is_delete' => 0,
                 ];
             }),
         ]);

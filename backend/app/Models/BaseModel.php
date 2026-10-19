@@ -21,6 +21,14 @@ abstract class BaseModel extends Model
         'deleted_at' => 'datetime',
     ];
 
+    /**
+     * Default hidden fields for all models.
+     */
+    protected $hidden = [
+        'deleted_at',
+        'deleted_by',
+    ];
+
     public function getCasts(): array
     {
         return array_merge([

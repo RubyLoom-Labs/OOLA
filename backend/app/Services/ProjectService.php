@@ -36,7 +36,13 @@ class ProjectService
         }
 
         if (! empty($filters['priority'])) {
-            $query->where('priority', $filters['priority']);
+            $p = $filters['priority'];
+            $baseP = str_replace(' Priority', '', $p);
+            $query->where(function ($q) use ($p, $baseP) {
+                $q->where('priority', $p)
+                    ->orWhere('priority', $baseP)
+                    ->orWhere('priority', $baseP . ' Priority');
+            });
         }
 
         return $query->latest()->paginate($perPage);

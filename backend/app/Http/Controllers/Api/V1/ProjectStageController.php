@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\ProjectStatusResource;
+use App\Http\Resources\ProjectStageResource;
 use App\Models\ProjectStage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +29,7 @@ class ProjectStageController extends Controller
         $stages = $query->orderBy('order_column')->get();
 
         return response()->json([
-            'data' => ProjectStatusResource::collection($stages),
+            'data' => ProjectStageResource::collection($stages),
         ]);
     }
 }

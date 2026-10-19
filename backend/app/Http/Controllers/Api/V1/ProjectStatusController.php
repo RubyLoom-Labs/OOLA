@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProjectStatusResource;
-use App\Models\ProjectStage;
+use App\Models\ProjectStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class ProjectStatusController extends Controller
 {
@@ -16,23 +15,16 @@ class ProjectStatusController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = ProjectStage::where('is_delete', false);
+        $query = ProjectStatus::where('is_delete', false);
 
-        // Optional filter: is_completed (boolean or 1/0)
-        if ($request->has('is_completed') && $request->input('is_completed') !== null && $request->input('is_completed') !== '') {
-            $query->where('is_completed', $request->boolean('is_completed'));
-        }
-
-        // Optional search by name or slug
         if ($request->filled('search')) {
             $search = trim($request->input('search'));
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('slug', 'like', "%{$search}%");
-            });
+            $query->where('name', 'like', "%{$search}%");
         }
 
-        $statuses = $query->orderBy('order_column', 'asc')->get();
+        $statuses = $query->orderBy('order_column', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
 
         return response()->json([
             'data' => ProjectStatusResource::collection($statuses),
@@ -44,7 +36,7 @@ class ProjectStatusController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $status = ProjectStage::where('is_delete', false)->findOrFail($id);
+        $status = ProjectStatus::where('is_delete', false)->findOrFail($id);
 
         return response()->json([
             'data' => new ProjectStatusResource($status),
@@ -58,19 +50,12 @@ class ProjectStatusController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
-            'slug' => ['nullable', 'string', 'max:100', 'unique:project_stages,slug'],
-            'color' => ['nullable', 'string', 'max:50'],
             'order_column' => ['nullable', 'integer'],
-            'is_completed' => ['nullable', 'boolean'],
         ]);
-
-        if (empty($validated['slug'])) {
-            $validated['slug'] = Str::slug($validated['name']);
-        }
 
         $validated['is_delete'] = false;
 
-        $status = ProjectStage::create($validated);
+        $status = ProjectStatus::create($validated);
 
         return (new ProjectStatusResource($status))
             ->response()
@@ -82,14 +67,11 @@ class ProjectStatusController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
-        $status = ProjectStage::where('is_delete', false)->findOrFail($id);
+        $status = ProjectStatus::where('is_delete', false)->findOrFail($id);
 
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:100'],
-            'slug' => ['nullable', 'string', 'max:100', 'unique:project_stages,slug,'.$status->id],
-            'color' => ['nullable', 'string', 'max:50'],
             'order_column' => ['nullable', 'integer'],
-            'is_completed' => ['nullable', 'boolean'],
         ]);
 
         $status->update($validated);
@@ -104,7 +86,7 @@ class ProjectStatusController extends Controller
      */
     public function destroy(int $id): JsonResponse
     {
-        $status = ProjectStage::where('is_delete', false)->findOrFail($id);
+        $status = ProjectStatus::where('is_delete', false)->findOrFail($id);
         $status->logicalDelete();
 
         return response()->json([
@@ -113,18 +95,17 @@ class ProjectStatusController extends Controller
     }
 
     /**
-     * Get the delivery status enum options ('Not Started', 'In Progress', 'On Hold', 'Completed', 'Cancelled').
+     * Get the active status names list as an array for dropdowns.
      */
     public function deliveryStatuses(): JsonResponse
     {
+        $names = ProjectStatus::where('is_delete', false)
+            ->orderBy('order_column', 'asc')
+            ->orderBy('id', 'asc')
+            ->pluck('name');
+
         return response()->json([
-            'data' => [
-                'Not Started',
-                'In Progress',
-                'On Hold',
-                'Completed',
-                'Cancelled',
-            ],
+            'data' => $names,
         ]);
     }
 }

@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
 use App\Models\Contact;
 use App\Models\ContactPhoneNumber;
 use App\Models\ContactSite;
-use App\Models\Customer;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,7 +37,7 @@ class ContactExtendedTest extends TestCase
     public function test_can_create_contact_with_sites_and_multiple_phones_including_country_code(): void
     {
         $admin = User::where('email', 'admin@ooralabz.com')->first();
-        $customer = Customer::first();
+        $customer = Company::first();
 
         $payload = [
             'company_id' => $customer->id,
@@ -270,7 +270,7 @@ class ContactExtendedTest extends TestCase
         Storage::fake('public');
 
         $admin = User::where('email', 'admin@ooralabz.com')->first();
-        $customer = Customer::first();
+        $customer = Company::first();
 
         $contact = Contact::create([
             'company_id' => $customer->id,
@@ -305,7 +305,7 @@ class ContactExtendedTest extends TestCase
         Storage::fake('public');
 
         $admin = User::where('email', 'admin@ooralabz.com')->first();
-        $customer = Customer::first();
+        $customer = Company::first();
         $file = UploadedFile::fake()->image('profile.jpg');
 
         $response = $this->actingAs($admin, 'sanctum')->post('/api/v1/contacts', [

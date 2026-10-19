@@ -18,12 +18,12 @@ class CompanyContactsLookupTest extends TestCase
         $this->seed();
     }
 
-    public function test_can_retrieve_active_contacts_id_and_names_by_company_id(): void
+    public function test_can_retrieve_active_contacts_for_active_company_via_single_endpoint(): void
     {
         $admin = User::where('email', 'admin@ooralabz.com')->first();
 
-        // 1. Target Company
-        $companyA = Company::first(); // e.g. Apex Global Logistics
+        // 1. Target Company (status = 1, is_delete = 0)
+        $companyA = Company::first();
 
         // Active contact for Company A (status = 1, is_delete = 0)
         $activeContactA = Contact::create([
@@ -73,9 +73,9 @@ class CompanyContactsLookupTest extends TestCase
             'is_delete' => false,
         ]);
 
-        // Endpoint 1: GET /api/v1/companies/{id}/contacts
-        $response1 = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/companies/{$companyA->id}/contacts");
-        $response1->assertStatus(200)
+        // The ONLY allowed endpoint: GET /api/v1/companies/{id}/contacts
+        $response = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/companies/{$companyA->id}/contacts");
+        $response->assertStatus(200)
             ->assertJsonStructure([
                 'data' => [
                     '*' => [
@@ -91,36 +91,68 @@ class CompanyContactsLookupTest extends TestCase
                 ],
             ]);
 
-        $ids1 = collect($response1->json('data'))->pluck('id')->toArray();
-        $this->assertContains($activeContactA->id, $ids1);
-        $this->assertNotContains($inactiveContactA->id, $ids1);
-        $this->assertNotContains($deletedContactA->id, $ids1);
-        $this->assertNotContains($contactB->id, $ids1);
+        $data = $response->json('data');
+        $ids = collect($data)->pluck('id')->toArray();
+        $this->assertContains($activeContactA->id, $ids);
+        $this->assertNotContains($inactiveContactA->id, $ids);
+        $this->assertNotContains($deletedContactA->id, $ids);
+        $this->assertNotContains($contactB->id, $ids);
 
-        // Ensure name properties are formatted
-        $contactPayload = collect($response1->json('data'))->firstWhere('id', $activeContactA->id);
+        // Ensure payload properties
+        $contactPayload = collect($data)->firstWhere('id', $activeContactA->id);
         $this->assertEquals('John Doe', $contactPayload['name']);
         $this->assertEquals('John', $contactPayload['first_name']);
         $this->assertEquals('Doe', $contactPayload['last_name']);
         $this->assertEquals(1, $contactPayload['status']);
         $this->assertEquals(0, $contactPayload['is_delete']);
 
-        // Endpoint 2: GET /api/v1/contacts/by-company/{companyId}
-        $response2 = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/contacts/by-company/{$companyA->id}");
-        $response2->assertStatus(200);
-        $ids2 = collect($response2->json('data'))->pluck('id')->toArray();
-        $this->assertContains($activeContactA->id, $ids2);
-        $this->assertNotContains($inactiveContactA->id, $ids2);
-        $this->assertNotContains($deletedContactA->id, $ids2);
-        $this->assertNotContains($contactB->id, $ids2);
+        // Verify other endpoints are permanently removed
+        $this->actingAs($admin, 'sanctum')->getJson("/api/v1/contacts/by-company/{$companyA->id}")->assertStatus(404);
+        $this->actingAs($admin, 'sanctum')->getJson("/api/v1/companies/contacts?company_id={$companyA->id}")->assertStatus(404);
+        $this->actingAs($admin, 'sanctum')->getJson("/api/v1/companies/{$companyA->id}/users")->assertStatus(404);
+    }
 
-        // Endpoint 3: GET /api/v1/companies/contacts?company_id={id}
-        $response3 = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/companies/contacts?company_id={$companyA->id}");
-        $response3->assertStatus(200);
-        $ids3 = collect($response3->json('data'))->pluck('id')->toArray();
-        $this->assertContains($activeContactA->id, $ids3);
-        $this->assertNotContains($inactiveContactA->id, $ids3);
-        $this->assertNotContains($deletedContactA->id, $ids3);
-        $this->assertNotContains($contactB->id, $ids3);
+    public function test_inactive_or_deleted_company_returns_404_and_no_contacts(): void
+    {
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $type = Company::first()->company_type_id;
+
+        // Inactive company (status = 0, is_delete = 0)
+        $inactiveCompany = Company::create([
+            'company_name' => 'Inactive Corp',
+            'company_type_id' => $type,
+            'email' => 'inactive@corp.com',
+            'status' => false,
+            'is_delete' => false,
+        ]);
+        Contact::create([
+            'company_id' => $inactiveCompany->id,
+            'first_name' => 'ShouldNotSee',
+            'last_name' => 'Me',
+            'status' => true,
+            'is_delete' => false,
+        ]);
+
+        $inactiveResponse = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/companies/{$inactiveCompany->id}/contacts");
+        $inactiveResponse->assertStatus(404);
+
+        // Deleted company (status = 1, is_delete = 1)
+        $deletedCompany = Company::create([
+            'company_name' => 'Deleted Corp',
+            'company_type_id' => $type,
+            'email' => 'deleted@corp.com',
+            'status' => true,
+            'is_delete' => true,
+        ]);
+        Contact::create([
+            'company_id' => $deletedCompany->id,
+            'first_name' => 'Ghost',
+            'last_name' => 'Contact',
+            'status' => true,
+            'is_delete' => false,
+        ]);
+
+        $deletedResponse = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/companies/{$deletedCompany->id}/contacts");
+        $deletedResponse->assertStatus(404);
     }
 }

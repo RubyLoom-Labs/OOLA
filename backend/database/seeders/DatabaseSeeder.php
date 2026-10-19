@@ -26,7 +26,9 @@ use App\Models\LeadStage;
 use App\Models\Payment;
 use App\Models\Permission;
 use App\Models\Project;
+use App\Models\ProjectPriority;
 use App\Models\ProjectStage;
+use App\Models\ProjectStatus;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Models\QuotationTemplate;
@@ -194,6 +196,29 @@ class DatabaseSeeder extends Seeder
         $createdProjectStages = [];
         foreach ($pStages as $ps) {
             $createdProjectStages[$ps['slug']] = ProjectStage::firstOrCreate(['slug' => $ps['slug']], $ps);
+        }
+
+        // 6b. Project Statuses (Not Started, In Progress, On Hold, Completed, Cancelled)
+        $statuses = [
+            ['name' => 'Not Started', 'order_column' => 1],
+            ['name' => 'In Progress', 'order_column' => 2],
+            ['name' => 'On Hold', 'order_column' => 3],
+            ['name' => 'Completed', 'order_column' => 4],
+            ['name' => 'Cancelled', 'order_column' => 5],
+        ];
+        foreach ($statuses as $st) {
+            ProjectStatus::firstOrCreate(['name' => $st['name']], array_merge($st, ['is_delete' => false]));
+        }
+
+        // 6c. Project Priorities (Low Priority, Medium Priority, High Priority, Urgent Priority)
+        $priorities = [
+            ['name' => 'Low Priority', 'order_column' => 1],
+            ['name' => 'Medium Priority', 'order_column' => 2],
+            ['name' => 'High Priority', 'order_column' => 3],
+            ['name' => 'Urgent Priority', 'order_column' => 4],
+        ];
+        foreach ($priorities as $pr) {
+            ProjectPriority::firstOrCreate(['name' => $pr['name']], array_merge($pr, ['is_delete' => false]));
         }
 
         // 7. Task Stages
