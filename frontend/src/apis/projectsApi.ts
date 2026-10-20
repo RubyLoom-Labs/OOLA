@@ -38,27 +38,10 @@ export interface ProjectPriorityItem {
   updated_at?: string
 }
 
-export interface ProjectManager {
-  id: number
-  name: string
-  email?: string
-  phone?: string
-  avatar?: string | null
-  role?: string
-  designation?: string
-  department?: string
-}
+import type { ProjectUser, UserRole, UserEmployee } from './usersApi'
+export type { ProjectUser, UserRole, UserEmployee }
 
-export interface ProjectUser {
-  id: number
-  name: string
-  email?: string
-  phone?: string
-  avatar?: string | null
-  role?: string
-  designation?: string
-  department?: string
-}
+export type ProjectManager = ProjectUser
 
 export interface ProjectCompany {
   id: number
@@ -78,6 +61,7 @@ export interface Project {
   customer_id: number
   customer?: ProjectCompany
   lead_id?: number | null
+  lead?: ProjectUser | null
   project_manager_id?: number | null
   manager?: ProjectManager | null
   stage_id?: number | null
@@ -116,6 +100,7 @@ export interface CreateProjectPayload {
   quoted_amount?: number
   cost?: number
   user_ids?: number[]
+  contact_ids?: number[]
 }
 
 export interface UpdateProjectPayload {
@@ -137,6 +122,7 @@ export interface UpdateProjectPayload {
   revenue?: number
   profit?: number
   user_ids?: number[]
+  contact_ids?: number[]
 }
 
 export interface ProjectQueryParams {

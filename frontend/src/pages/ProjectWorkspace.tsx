@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -10,18 +10,13 @@ import {
   LayoutGrid,
   List,
   Calendar,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
   Building2,
   Users,
   DollarSign,
-  TrendingUp,
   FolderKanban,
   Code,
   FileText,
   Files,
-  MessageSquare,
   CheckSquare,
   ListTodo,
   Share2,
@@ -32,22 +27,15 @@ import {
   ArrowDown,
   Briefcase,
   Check,
-  Loader2,
-  Tag,
   Activity,
   LifeBuoy,
   Paperclip,
-  ArrowUpRight,
-  Filter,
 } from 'lucide-react'
 import {
   projectsApi,
   type Project,
-  type ProjectStage,
-  type ProjectUser,
 } from '@/apis/projectsApi'
 import ProjectViewDrawer from '@/components/projects/ProjectViewDrawer'
-import { capitalizeWords, formatCurrency } from '@/lib/utils'
 
 // Task Interface matching the Kanban board requirements
 export interface KanbanTask {
@@ -313,8 +301,6 @@ export default function ProjectWorkspace() {
 
   // Project state
   const [project, setProject] = useState<Project | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   // Drawer edit modal state
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
@@ -377,11 +363,9 @@ export default function ProjectWorkspace() {
   const fetchProjectData = async () => {
     if (!id) return
     try {
-      setLoading(true)
       const res = await projectsApi.getProject(id)
       const projectData = (res as any)?.data?.data || (res as any)?.data || res
       setProject(projectData)
-      setError(null)
     } catch (err: any) {
       console.warn('API getProject failed, using fallback mock data:', err)
       // Provide robust fallback data matching the screenshot
@@ -399,6 +383,8 @@ export default function ProjectWorkspace() {
         manager: {
           id: 1,
           name: 'Michael Chen',
+          email: 'michael.chen@ooralabz.com',
+          status: 'Active',
           role: 'Project Manager',
           avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
         },
@@ -420,7 +406,7 @@ export default function ProjectWorkspace() {
         payments_count: 4,
       })
     } finally {
-      setLoading(false)
+      // Done fetching
     }
   }
 
@@ -545,6 +531,8 @@ export default function ProjectWorkspace() {
     start_date: '2026-09-01',
     expected_end_date: '2026-12-31',
     budget: 1200000,
+    cost: 600000,
+    revenue: 600000,
   }
 
   return (

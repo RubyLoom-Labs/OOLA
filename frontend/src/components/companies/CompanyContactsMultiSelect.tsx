@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import {
-  Users,
   ChevronDown,
   X,
   Search,
   Check,
   Loader2,
   Mail,
-  Briefcase,
   AlertCircle,
 } from 'lucide-react'
 import { companiesApi, type CompanyContact } from '@/apis/companiesApi'

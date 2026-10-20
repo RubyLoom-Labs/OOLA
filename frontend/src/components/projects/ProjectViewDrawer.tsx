@@ -10,7 +10,6 @@ import {
   DollarSign,
   User,
   Users,
-  Check,
   CheckCircle,
   Clock,
   Trash2,
@@ -22,7 +21,6 @@ import {
   CheckSquare,
   FileText,
   TrendingUp,
-  Percent,
   Briefcase,
   Mail,
   Phone,
@@ -37,11 +35,14 @@ import type {
   UpdateProjectPayload,
 } from '@/apis/projectsApi'
 import { projectsApi } from '@/apis/projectsApi'
-import { companiesApi, type CompanyLookupItem, type CompanyContact } from '@/apis/companiesApi'
+import type { CompanyLookupItem, CompanyContact } from '@/apis/companiesApi'
 import SlideDrawer from '@/components/common/SlideDrawer'
 import CompanySelect from '@/components/companies/CompanySelect'
 import CompanyContactsMultiSelect from '@/components/companies/CompanyContactsMultiSelect'
 import ConfirmationModal from '@/components/common/ConfirmationModal'
+import UserSelect from '@/components/users/UserSelect'
+import TeamMembersAllocation from '@/components/projects/TeamMembersAllocation'
+import { getUserRoleName } from '@/apis/usersApi'
 import { capitalizeWords } from '@/lib/utils'
 
 interface ProjectViewDrawerProps {
@@ -54,17 +55,6 @@ interface ProjectViewDrawerProps {
 }
 
 type TabType = 'overview' | 'financials' | 'team' | 'tasks' | 'payments'
-
-const PROJECT_TYPE_PRESETS = [
-  'Cloud Infrastructure',
-  'Web Development',
-  'Mobile App Development',
-  'DevOps & Hybrid Cloud',
-  'Enterprise ERP Integration',
-  'Maintenance & SLA',
-  'Security & Audit',
-  'Consulting & Advisory',
-]
 
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Urgent']
 
@@ -98,8 +88,6 @@ export default function ProjectViewDrawer({
   const [stages, setStages] = useState<ProjectStage[]>([])
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatusItem[]>([])
   const [projectPriorities, setProjectPriorities] = useState<ProjectPriorityItem[]>([])
-  const [availableUsers, setAvailableUsers] = useState<ProjectUser[]>([])
-  const [leads, setLeads] = useState<any[]>([])
 
   // Edit form states
   const [projectTitle, setProjectTitle] = useState('')
@@ -107,7 +95,9 @@ export default function ProjectViewDrawer({
   const [selectedCompany, setSelectedCompany] = useState<CompanyLookupItem | null>(null)
   const [description, setDescription] = useState('')
   const [leadId, setLeadId] = useState<number | ''>('')
+  const [selectedLead, setSelectedLead] = useState<ProjectUser | null>(null)
   const [projectManagerId, setProjectManagerId] = useState<number | ''>('')
+  const [selectedManager, setSelectedManager] = useState<ProjectUser | null>(null)
   const [stageId, setStageId] = useState<number | ''>('')
   const [projectType, setProjectType] = useState('Cloud Infrastructure')
   const [priority, setPriority] = useState('High')
@@ -121,6 +111,7 @@ export default function ProjectViewDrawer({
   const [revenue, setRevenue] = useState<string>('')
   const [profit, setProfit] = useState<string>('')
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([])
+  const [selectedUsers, setSelectedUsers] = useState<ProjectUser[]>([])
   const [selectedContactIds, setSelectedContactIds] = useState<number[]>([])
   const [selectedContacts, setSelectedContacts] = useState<CompanyContact[]>([])
 
@@ -132,17 +123,16 @@ export default function ProjectViewDrawer({
       setSelectedCompany({
         id: p.customer.id,
         company_name: p.customer.company_name,
-        company_code: p.customer.customer_code || p.customer.company_code,
-        email: p.customer.email,
-        phone_number: p.customer.phone,
-        status: p.customer.status,
+        company_code: p.customer.customer_code || p.customer.company_code || '',
       })
     } else {
       setSelectedCompany(null)
     }
     setDescription(p.description || '')
-    setLeadId(p.lead_id || '')
-    setProjectManagerId(p.project_manager_id || '')
+    setLeadId(p.lead_id || (p.lead ? p.lead.id : ''))
+    setSelectedLead(p.lead || null)
+    setProjectManagerId(p.project_manager_id || (p.manager ? p.manager.id : ''))
+    setSelectedManager(p.manager || null)
     setStageId(p.stage_id || '')
     setProjectType(p.project_type || 'Cloud Infrastructure')
     setPriority(p.priority || 'High')
@@ -156,6 +146,7 @@ export default function ProjectViewDrawer({
     setRevenue(p.revenue !== null && p.revenue !== undefined ? String(p.revenue) : '')
     setProfit(p.profit !== null && p.profit !== undefined ? String(p.profit) : '')
     setSelectedUserIds(Array.isArray(p.users) ? p.users.map((u) => u.id) : [])
+    setSelectedUsers(Array.isArray(p.users) ? p.users : [])
     setSelectedContactIds(
       (p as any).contact_ids || (Array.isArray((p as any).contacts) ? (p as any).contacts.map((c: any) => c.id) : [])
     )
@@ -180,12 +171,10 @@ export default function ProjectViewDrawer({
 
   const fetchMetadata = async () => {
     try {
-      const [stageRes, statusRes, priorityRes, userRes, leadRes] = await Promise.allSettled([
+      const [stageRes, statusRes, priorityRes] = await Promise.allSettled([
         projectsApi.getStages(),
         projectsApi.getProjectStatuses(),
         projectsApi.getProjectPriorities(),
-        projectsApi.getUsers(),
-        projectsApi.getLeads(),
       ])
 
       if (stageRes.status === 'fulfilled' && stageRes.value.data) {
@@ -196,12 +185,6 @@ export default function ProjectViewDrawer({
       }
       if (priorityRes.status === 'fulfilled' && priorityRes.value.data) {
         setProjectPriorities(priorityRes.value.data)
-      }
-      if (userRes.status === 'fulfilled' && userRes.value.data) {
-        setAvailableUsers(userRes.value.data)
-      }
-      if (leadRes.status === 'fulfilled' && leadRes.value.data) {
-        setLeads(leadRes.value.data)
       }
     } catch (err) {
       console.error('Failed to load project metadata:', err)
@@ -240,12 +223,6 @@ export default function ProjectViewDrawer({
     }
     setValidationError(null)
     setIsEditing(false)
-  }
-
-  const handleToggleUser = (userId: number) => {
-    setSelectedUserIds((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    )
   }
 
   const handleSaveClick = async (e?: React.FormEvent) => {
@@ -302,11 +279,6 @@ export default function ProjectViewDrawer({
     }
   }
 
-  const toggleUserSelection = (userId: number) => {
-    setSelectedUserIds((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    )
-  }
 
   if (!localProject) return null
 
@@ -713,36 +685,30 @@ export default function ProjectViewDrawer({
 
                         <div className="grid grid-cols-2 gap-3">
                           <div className="form-group min-w-0">
-                            <label className="form-label text-xs">Project Manager</label>
-                            <select
-                              className="form-select form-input-sm"
+                            <UserSelect
+                              id="view-project-manager-select"
+                              label="Project Manager"
                               value={projectManagerId}
-                              onChange={(e) =>
-                                setProjectManagerId(e.target.value ? Number(e.target.value) : '')
-                              }
-                            >
-                              <option value="">Select Project Manager...</option>
-                              {availableUsers.map((u) => (
-                                <option key={u.id} value={u.id}>
-                                  {u.name} {u.designation || u.role ? `(${u.designation || u.role})` : ''}
-                                </option>
-                              ))}
-                            </select>
+                              initialUser={selectedManager}
+                              onChange={(id, u) => {
+                                setProjectManagerId(id)
+                                setSelectedManager(u)
+                              }}
+                              placeholder="Select Project Manager..."
+                            />
                           </div>
                           <div className="form-group min-w-0">
-                            <label className="form-label text-xs">Associated Lead</label>
-                            <select
-                              className="form-select form-input-sm"
+                            <UserSelect
+                              id="view-associated-lead-select"
+                              label="Associated Lead"
                               value={leadId}
-                              onChange={(e) => setLeadId(e.target.value ? Number(e.target.value) : '')}
-                            >
-                              <option value="">No linked lead</option>
-                              {leads.map((l) => (
-                                <option key={l.id} value={l.id}>
-                                  {l.lead_code || `Lead #${l.id}`} - {l.lead_title || l.title || l.requirement_name || 'Opportunity'}
-                                </option>
-                              ))}
-                            </select>
+                              initialUser={selectedLead}
+                              onChange={(id, u) => {
+                                setLeadId(id)
+                                setSelectedLead(u)
+                              }}
+                              placeholder="Select Associated Lead..."
+                            />
                           </div>
                         </div>
                       </div>
@@ -891,39 +857,15 @@ export default function ProjectViewDrawer({
                           {selectedUserIds.length} allocated
                         </span>
                       </div>
-                      <div className="space-y-3 pt-1">
-                        <div className="grid grid-cols-2 gap-2 p-2 bg-slate-50/70 rounded-xl border border-slate-200">
-                          {availableUsers.map((u) => {
-                            const isSelected = selectedUserIds.includes(u.id)
-                            return (
-                              <div
-                                key={u.id}
-                                className={`flex items-center gap-2 p-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${
-                                  isSelected
-                                    ? 'bg-blue-50 border-blue-200 text-blue-900 font-medium'
-                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                                }`}
-                                onClick={() => handleToggleUser(u.id)}
-                              >
-                                <div
-                                  className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${
-                                    isSelected
-                                      ? 'bg-blue-600 border-blue-600 text-white'
-                                      : 'border-slate-300 bg-white'
-                                  }`}
-                                >
-                                  {isSelected && <Check size={11} strokeWidth={3} />}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate">{u.name}</div>
-                                  <div className="text-muted text-[10px] truncate">
-                                    {u.designation || u.role}
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
+                      <div className="pt-2">
+                        <TeamMembersAllocation
+                          selectedUserIds={selectedUserIds}
+                          initialUsers={selectedUsers}
+                          onChange={(ids, userObjs) => {
+                            setSelectedUserIds(ids)
+                            setSelectedUsers(userObjs)
+                          }}
+                        />
                       </div>
                     </div>
 
@@ -1146,45 +1088,82 @@ export default function ProjectViewDrawer({
                       </div>
                     </div>
 
-                    {/* Project Manager Card */}
+                    {/* Project Leadership Card */}
                     <div className="cvd-card">
                       <div className="cvd-card-header">
                         <span className="cvd-card-title flex items-center gap-1.5">
                           <User size={14} className="text-primary-600" />
-                          Project Manager
+                          Project Leadership
                         </span>
                       </div>
-                      <div className="p-4">
-                        {localProject.manager ? (
-                          <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm shrink-0">
-                              {localProject.manager.name
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')
-                                .substring(0, 2)
-                                .toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 text-sm">
-                                {capitalizeWords(localProject.manager.name)}
-                              </h4>
-                              <p className="text-xs text-gray-500">
-                                {localProject.manager.designation || 'Project Manager'}
-                              </p>
-                              {localProject.manager.email && (
-                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                                  <Mail size={11} className="text-gray-400" />
-                                  {localProject.manager.email}
+                      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">
+                            Project Manager
+                          </span>
+                          {localProject.manager ? (
+                            <div className="flex items-center gap-3 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                              <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                {localProject.manager.name
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .substring(0, 2)
+                                  .toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-gray-900 text-xs truncate">
+                                  {capitalizeWords(localProject.manager.name)}
+                                </h4>
+                                <p className="text-[11px] text-gray-500 truncate">
+                                  {localProject.manager.designation || 'Project Manager'}
                                 </p>
-                              )}
+                                {localProject.manager.email && (
+                                  <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5 truncate">
+                                    <Mail size={10} className="text-gray-400" />
+                                    {localProject.manager.email}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-gray-500 italic">
-                            No dedicated project manager appointed.
-                          </p>
-                        )}
+                          ) : (
+                            <p className="text-xs text-gray-400 italic">No manager appointed.</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">
+                            Associated Lead
+                          </span>
+                          {localProject.lead ? (
+                            <div className="flex items-center gap-3 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                              <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                {localProject.lead.name
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .substring(0, 2)
+                                  .toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-gray-900 text-xs truncate">
+                                  {capitalizeWords(localProject.lead.name)}
+                                </h4>
+                                <p className="text-[11px] text-gray-500 truncate">
+                                  {localProject.lead.designation || 'Project Lead'}
+                                </p>
+                                {localProject.lead.email && (
+                                  <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5 truncate">
+                                    <Mail size={10} className="text-gray-400" />
+                                    {localProject.lead.email}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400 italic">No lead appointed.</p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1349,7 +1328,7 @@ export default function ProjectViewDrawer({
                                 {capitalizeWords(u.name)}
                               </h4>
                               <p className="text-[11px] text-gray-500 truncate">
-                                {u.designation || capitalizeWords(u.role || 'Developer')}
+                                {u.designation || capitalizeWords(getUserRoleName(u) || 'Developer')}
                               </p>
                               {u.email && (
                                 <p className="text-[11px] text-gray-400 truncate mt-0.5">
@@ -1458,7 +1437,7 @@ export default function ProjectViewDrawer({
         title="Delete Project"
         message={`Are you sure you want to delete "${localProject.project_title}" (${localProject.project_code})? This action cannot be undone.`}
         confirmText="Delete Project"
-        confirmVariant="danger"
+        variant="danger"
       />
     </>
   )

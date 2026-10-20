@@ -7,11 +7,7 @@ import {
   Building2,
   Calendar,
   DollarSign,
-  User,
   Users,
-  Check,
-  Tag,
-  Layers,
   FileText,
 } from 'lucide-react'
 import type {
@@ -24,10 +20,12 @@ import type {
   UpdateProjectPayload,
 } from '@/apis/projectsApi'
 import { projectsApi } from '@/apis/projectsApi'
-import { companiesApi, type CompanyLookupItem, type CompanyContact } from '@/apis/companiesApi'
+import type { CompanyLookupItem } from '@/apis/companiesApi'
 import SlideDrawer from '@/components/common/SlideDrawer'
 import CompanySelect from '@/components/companies/CompanySelect'
 import CompanyContactsMultiSelect from '@/components/companies/CompanyContactsMultiSelect'
+import UserSelect from '@/components/users/UserSelect'
+import TeamMembersAllocation from '@/components/projects/TeamMembersAllocation'
 import { capitalizeWords } from '@/lib/utils'
 
 interface ProjectFormDrawerProps {
@@ -39,17 +37,6 @@ interface ProjectFormDrawerProps {
     isEdit: boolean
   ) => Promise<void>
 }
-
-const PROJECT_TYPE_PRESETS = [
-  'Cloud Infrastructure',
-  'Web Development',
-  'Mobile App Development',
-  'DevOps & Hybrid Cloud',
-  'Enterprise ERP Integration',
-  'Maintenance & SLA',
-  'Security & Audit',
-  'Consulting & Advisory',
-]
 
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Urgent']
 
@@ -75,8 +62,6 @@ export default function ProjectFormDrawer({
   const [stages, setStages] = useState<ProjectStage[]>([])
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatusItem[]>([])
   const [projectPriorities, setProjectPriorities] = useState<ProjectPriorityItem[]>([])
-  const [users, setUsers] = useState<ProjectUser[]>([])
-  const [leads, setLeads] = useState<any[]>([])
 
   // Form Fields
   const [projectTitle, setProjectTitle] = useState('')
@@ -84,10 +69,11 @@ export default function ProjectFormDrawer({
   const [selectedCompany, setSelectedCompany] = useState<CompanyLookupItem | null>(null)
   const [description, setDescription] = useState('')
   const [leadId, setLeadId] = useState<number | ''>('')
+  const [selectedLead, setSelectedLead] = useState<ProjectUser | null>(null)
   const [projectManagerId, setProjectManagerId] = useState<number | ''>('')
+  const [selectedManager, setSelectedManager] = useState<ProjectUser | null>(null)
   const [stageId, setStageId] = useState<number | ''>('')
   const [projectType, setProjectType] = useState('Cloud Infrastructure')
-  const [customType, setCustomType] = useState('')
   const [priority, setPriority] = useState('High')
   const [status, setStatus] = useState('In Progress')
   const [startDate, setStartDate] = useState('')
@@ -99,27 +85,24 @@ export default function ProjectFormDrawer({
   const [revenue, setRevenue] = useState<string>('')
   const [profit, setProfit] = useState<string>('')
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([])
+  const [selectedUsers, setSelectedUsers] = useState<ProjectUser[]>([])
   const [selectedContactIds, setSelectedContactIds] = useState<number[]>([])
-  const [selectedContacts, setSelectedContacts] = useState<CompanyContact[]>([])
 
   // Validation States
   const [titleError, setTitleError] = useState<string | null>(null)
   const [customerError, setCustomerError] = useState<string | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
-  const [touched, setTouched] = useState({ title: false, customer: false })
 
-  // Load Stages, Statuses, Priorities, Users, Leads dynamically when drawer opens
+  // Load Stages, Statuses, Priorities dynamically when drawer opens
   useEffect(() => {
     if (!isOpen) return
     const fetchMetadata = async () => {
       setMetaLoading(true)
       try {
-        const [stagesRes, statusesRes, prioritiesRes, usersRes, leadsRes] = await Promise.allSettled([
+        const [stagesRes, statusesRes, prioritiesRes] = await Promise.allSettled([
           projectsApi.getStages(),
           projectsApi.getProjectStatuses(),
           projectsApi.getProjectPriorities(),
-          projectsApi.getUsers(),
-          projectsApi.getLeads(),
         ])
 
         if (stagesRes.status === 'fulfilled' && Array.isArray(stagesRes.value.data)) {
@@ -135,17 +118,6 @@ export default function ProjectFormDrawer({
 
         if (prioritiesRes.status === 'fulfilled' && Array.isArray(prioritiesRes.value.data)) {
           setProjectPriorities(prioritiesRes.value.data)
-        }
-
-        if (usersRes.status === 'fulfilled' && Array.isArray(usersRes.value.data)) {
-          setUsers(usersRes.value.data)
-          if (!project && usersRes.value.data.length > 0 && !projectManagerId) {
-            setProjectManagerId(usersRes.value.data[0].id)
-          }
-        }
-
-        if (leadsRes.status === 'fulfilled' && Array.isArray(leadsRes.value.data)) {
-          setLeads(leadsRes.value.data)
         }
       } catch (err) {
         console.error('Failed to load project metadata:', err)
@@ -172,19 +144,12 @@ export default function ProjectFormDrawer({
         setSelectedCompany(null)
       }
       setDescription(project.description || '')
-      setLeadId(project.lead_id || '')
+      setLeadId(project.lead_id || (project.lead ? project.lead.id : ''))
+      setSelectedLead(project.lead || null)
       setProjectManagerId(project.project_manager_id || (project.manager ? project.manager.id : ''))
+      setSelectedManager(project.manager || null)
       setStageId(project.stage_id || (project.stage ? project.stage.id : ''))
-
-      const pType = project.project_type || 'Cloud Infrastructure'
-      if (PROJECT_TYPE_PRESETS.includes(pType)) {
-        setProjectType(pType)
-        setCustomType('')
-      } else {
-        setProjectType('Custom')
-        setCustomType(pType)
-      }
-
+      setProjectType(project.project_type || 'Cloud Infrastructure')
       setPriority(project.priority || 'High')
       setStatus(project.status || 'In Progress')
       setStartDate(project.start_date || '')
@@ -198,25 +163,25 @@ export default function ProjectFormDrawer({
 
       const userIds = Array.isArray(project.users) ? project.users.map((u) => u.id) : []
       setSelectedUserIds(userIds)
+      setSelectedUsers(Array.isArray(project.users) ? project.users : [])
       setSelectedContactIds(
         (project as any).contact_ids || (Array.isArray((project as any).contacts) ? (project as any).contacts.map((c: any) => c.id) : [])
       )
-      setSelectedContacts((project as any).contacts || [])
 
       setTitleError(null)
       setCustomerError(null)
       setValidationError(null)
-      setTouched({ title: false, customer: false })
     } else if (isOpen && !project) {
       setProjectTitle('')
       setCustomerId(undefined)
       setSelectedCompany(null)
       setDescription('')
       setLeadId('')
-      setProjectManagerId(users[0]?.id || '')
+      setSelectedLead(null)
+      setProjectManagerId('')
+      setSelectedManager(null)
       setStageId(stages[0]?.id || '')
       setProjectType('Cloud Infrastructure')
-      setCustomType('')
       setPriority('High')
       setStatus('In Progress')
       setStartDate(new Date().toISOString().slice(0, 10))
@@ -227,28 +192,18 @@ export default function ProjectFormDrawer({
       setCost('')
       setRevenue('')
       setProfit('')
-      setSelectedUserIds(users[0]?.id ? [users[0].id] : [])
+      setSelectedUserIds([])
+      setSelectedUsers([])
       setSelectedContactIds([])
-      setSelectedContacts([])
 
       setTitleError(null)
       setCustomerError(null)
       setValidationError(null)
-      setTouched({ title: false, customer: false })
     }
-  }, [project, isOpen, stages, users])
-
-  // Toggle user assignment
-  const handleToggleUser = (userId: number) => {
-    setSelectedUserIds((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    )
-  }
+  }, [project, isOpen, stages])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    setTouched({ title: true, customer: true })
 
     let hasError = false
     if (!projectTitle.trim()) {
@@ -535,7 +490,6 @@ export default function ProjectFormDrawer({
                         if (id) setCustomerError(null)
                         if (id !== customerId) {
                           setSelectedContactIds([])
-                          setSelectedContacts([])
                         }
                       }}
                       placeholder="Select client company..."
@@ -553,9 +507,8 @@ export default function ProjectFormDrawer({
                   <CompanyContactsMultiSelect
                     companyId={customerId}
                     value={selectedContactIds}
-                    onChange={(ids, contacts) => {
+                    onChange={(ids) => {
                       setSelectedContactIds(ids)
-                      setSelectedContacts(contacts)
                     }}
                     label="Company Contact"
                     placeholder="Select company contacts..."
@@ -563,36 +516,30 @@ export default function ProjectFormDrawer({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="form-group min-w-0">
-                      <label className="form-label text-xs">Project Manager</label>
-                      <select
-                        className="form-select form-input-sm"
+                      <UserSelect
+                        id="form-project-manager-select"
+                        label="Project Manager"
                         value={projectManagerId}
-                        onChange={(e) =>
-                          setProjectManagerId(e.target.value ? Number(e.target.value) : '')
-                        }
-                      >
-                        <option value="">Select Project Manager...</option>
-                        {users.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name} {u.designation || u.role ? `(${u.designation || u.role})` : ''}
-                          </option>
-                        ))}
-                      </select>
+                        initialUser={selectedManager}
+                        onChange={(id, u) => {
+                          setProjectManagerId(id)
+                          setSelectedManager(u)
+                        }}
+                        placeholder="Select Project Manager..."
+                      />
                     </div>
                     <div className="form-group min-w-0">
-                      <label className="form-label text-xs">Associated Lead</label>
-                      <select
-                        className="form-select form-input-sm"
+                      <UserSelect
+                        id="form-associated-lead-select"
+                        label="Associated Lead"
                         value={leadId}
-                        onChange={(e) => setLeadId(e.target.value ? Number(e.target.value) : '')}
-                      >
-                        <option value="">No linked lead</option>
-                        {leads.map((l) => (
-                          <option key={l.id} value={l.id}>
-                            {l.lead_code || `Lead #${l.id}`} - {l.lead_title || l.title || l.requirement_name || 'Opportunity'}
-                          </option>
-                        ))}
-                      </select>
+                        initialUser={selectedLead}
+                        onChange={(id, u) => {
+                          setLeadId(id)
+                          setSelectedLead(u)
+                        }}
+                        placeholder="Select Associated Lead..."
+                      />
                     </div>
                   </div>
                 </div>
@@ -741,39 +688,15 @@ export default function ProjectFormDrawer({
                     {selectedUserIds.length} allocated
                   </span>
                 </div>
-                <div className="space-y-3 pt-1">
-                  <div className="grid grid-cols-2 gap-2 p-2 bg-slate-50/70 rounded-xl border border-slate-200">
-                    {users.map((u) => {
-                      const isSelected = selectedUserIds.includes(u.id)
-                      return (
-                        <div
-                          key={u.id}
-                          className={`flex items-center gap-2 p-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${
-                            isSelected
-                              ? 'bg-blue-50 border-blue-200 text-blue-900 font-medium'
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                          }`}
-                          onClick={() => handleToggleUser(u.id)}
-                        >
-                          <div
-                            className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${
-                              isSelected
-                                ? 'bg-blue-600 border-blue-600 text-white'
-                                : 'border-slate-300 bg-white'
-                            }`}
-                          >
-                            {isSelected && <Check size={11} strokeWidth={3} />}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate">{u.name}</div>
-                            <div className="text-muted text-[10px] truncate">
-                              {u.designation || u.role}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
+                <div className="pt-2">
+                  <TeamMembersAllocation
+                    selectedUserIds={selectedUserIds}
+                    initialUsers={selectedUsers}
+                    onChange={(ids, userObjs) => {
+                      setSelectedUserIds(ids)
+                      setSelectedUsers(userObjs)
+                    }}
+                  />
                 </div>
               </div>
 

@@ -14,12 +14,6 @@ import {
   Building2,
   Users,
   DollarSign,
-  TrendingUp,
-  Tag,
-  Calendar,
-  AlertCircle,
-  Briefcase,
-  Layers,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import StatCard from '@/components/common/StatCard'
@@ -247,10 +241,6 @@ export default function Projects() {
     setIsFormOpen(true)
   }
 
-  const handleOpenEditForm = (project: Project) => {
-    setEditingProject(project)
-    setIsFormOpen(true)
-  }
 
   const handleCloseForm = () => {
     setIsFormOpen(false)
@@ -864,7 +854,7 @@ export default function Projects() {
         title="Delete Project"
         message={`Are you sure you want to permanently delete "${projectToDelete?.project_title}" (${projectToDelete?.project_code})? This action cannot be undone.`}
         confirmText="Delete Project"
-        confirmVariant="danger"
+        variant="danger"
       />
     </div>
   )

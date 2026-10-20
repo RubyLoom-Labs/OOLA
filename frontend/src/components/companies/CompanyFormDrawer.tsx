@@ -10,7 +10,6 @@ import {
   User,
   Upload,
   Trash2,
-  Camera,
 } from 'lucide-react'
 import type {
   Company,

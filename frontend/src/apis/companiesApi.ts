@@ -381,15 +381,16 @@ export const companiesApi = {
       res = await apiClient.post<ApiResponse<Company>>(`/companies/${id}`, payload)
     } else {
       // Build clean JSON payload matching PATCH specification
+      const updateData = payload as UpdateCompanyPayload
       const cleanPayload: Record<string, any> = {}
-      Object.entries(payload).forEach(([key, val]) => {
+      Object.entries(updateData).forEach(([key, val]) => {
         if (val !== undefined && key !== 'id') {
           if (key === 'status') {
             // Backend expects boolean true/false
             cleanPayload[key] = typeof val === 'boolean' ? val : val === 'Active' || val === 1 || val === '1'
           } else if (key === 'company_type_id' || key === 'company_size_id') {
             cleanPayload[key] = val !== null && val !== '' ? Number(val) : null
-          } else if (key === 'phone' && !payload.phone_number) {
+          } else if (key === 'phone' && !updateData.phone_number) {
             cleanPayload['phone_number'] = typeof val === 'string' ? val.trim() : val
           } else if (key === 'logo') {
             // Supports base64 Data URL string or null

@@ -1,4 +1,3 @@
-import React from 'react'
 import CompanyFormDrawer from '@/components/companies/CompanyFormDrawer'
 import type { Customer, CreateCustomerPayload, UpdateCustomerPayload } from '@/apis/customersApi'
 

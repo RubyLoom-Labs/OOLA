@@ -1,4 +1,3 @@
-import React from 'react'
 import CompanyViewDrawer from '@/components/companies/CompanyViewDrawer'
 import type { Customer } from '@/apis/customersApi'
 

@@ -21,7 +21,6 @@ import {
   UserCheck,
   Camera,
   Upload,
-  X,
 } from 'lucide-react'
 import type {
   Company,
