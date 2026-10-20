@@ -22,7 +22,7 @@ class AuthController extends Controller
 {
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::with('roles.permissions')
+        $user = User::with(['role.permissions', 'employee'])
             ->where('email', $request->email)
             ->first();
 
@@ -148,7 +148,7 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load('roles.permissions');
+        $user = $request->user()->load(['role.permissions', 'employee']);
 
         return response()->json([
             'user' => new UserResource($user),
@@ -169,9 +169,7 @@ class AuthController extends Controller
         $user = $request->user();
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'designation' => ['nullable', 'string', 'max:100'],
-            'department' => ['nullable', 'string', 'max:100'],
+            'avatar' => ['nullable', 'string', 'max:500'],
             'password' => ['nullable', 'string', 'min:8'],
         ]);
 

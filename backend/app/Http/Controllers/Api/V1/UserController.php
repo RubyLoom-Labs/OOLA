@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Mail\UserInvitationMail;
+use App\Models\Employee;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,7 @@ class UserController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = User::with('roles');
+        $query = User::with(['role', 'employee']);
 
         // Optional filter by status (Active / Inactive)
         if ($request->has('status') && $request->input('status') !== null && $request->input('status') !== '') {
@@ -33,16 +34,26 @@ class UserController extends Controller
             }
         }
 
-        // Optional search by name, email, phone, role, or department
+        // Optional filter by role_id
+        if ($request->filled('role_id')) {
+            $query->where('role_id', $request->input('role_id'));
+        }
+
+        // Optional filter by is_employee
+        if ($request->has('is_employee') && $request->input('is_employee') !== null && $request->input('is_employee') !== '') {
+            $query->where('is_employee', filter_var($request->input('is_employee'), FILTER_VALIDATE_BOOLEAN));
+        }
+
+        // Optional search by name, email, or role name
         if ($request->filled('search')) {
             $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('role', 'like', "%{$search}%")
-                    ->orWhere('department', 'like', "%{$search}%")
-                    ->orWhere('designation', 'like', "%{$search}%");
+                    ->orWhereHas('role', function ($rq) use ($search) {
+                        $rq->where('name', 'like', "%{$search}%")
+                            ->orWhere('slug', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -57,16 +68,14 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'role' => ['nullable', 'string', 'max:100'],
-            'designation' => ['nullable', 'string', 'max:100'],
-            'department' => ['nullable', 'string', 'max:100'],
-            'role_ids' => ['nullable', 'array'],
-            'role_ids.*' => ['exists:roles,id'],
+            'role_id' => ['required', 'integer', 'exists:roles,id'],
+            'is_employee' => ['nullable', 'boolean'],
+            'employee_id' => ['nullable', 'integer', 'exists:employees,id'],
         ]);
 
-        $roleIds = $validated['role_ids'] ?? [];
-        unset($validated['role_ids']);
+        if (! empty($validated['employee_id']) && ! isset($validated['is_employee'])) {
+            $validated['is_employee'] = true;
+        }
 
         // User cannot manually enter password. Account starts Inactive with a secure random hash.
         $validated['password'] = Hash::make(Str::random(32));
@@ -74,8 +83,8 @@ class UserController extends Controller
 
         $user = User::create($validated);
 
-        if (! empty($roleIds)) {
-            $user->roles()->sync($roleIds);
+        if (! empty($validated['employee_id'])) {
+            Employee::where('id', $validated['employee_id'])->update(['user_id' => $user->id]);
         }
 
         // Generate password setup token and dispatch invitation email
@@ -100,25 +109,22 @@ class UserController extends Controller
 
         ActivityLogger::log('User Created', "Created user: {$user->name} ({$user->email}) - Invitation email sent", $user);
 
-        return (new UserResource($user->load('roles')))->response()->setStatusCode(201);
+        return (new UserResource($user->load(['role', 'employee'])))->response()->setStatusCode(201);
     }
 
     public function show(User $user): UserResource
     {
-        return new UserResource($user->load('roles.permissions'));
+        return new UserResource($user->load(['role.permissions', 'employee']));
     }
 
     public function update(Request $request, User $user): UserResource
     {
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'role' => ['nullable', 'string', 'max:100'],
-            'designation' => ['nullable', 'string', 'max:100'],
-            'department' => ['nullable', 'string', 'max:100'],
+            'role_id' => ['sometimes', 'required', 'integer', 'exists:roles,id'],
             'status' => ['nullable', 'string', 'in:Active,Inactive,0,1'],
-            'role_ids' => ['nullable', 'array'],
-            'role_ids.*' => ['exists:roles,id'],
+            'is_employee' => ['sometimes', 'boolean'],
+            'employee_id' => ['nullable', 'integer', 'exists:employees,id'],
         ]);
 
         if (isset($validated['status'])) {
@@ -129,21 +135,19 @@ class UserController extends Controller
             }
         }
 
-        $roleIds = null;
-        if (array_key_exists('role_ids', $validated)) {
-            $roleIds = $validated['role_ids'];
-            unset($validated['role_ids']);
+        if (! empty($validated['employee_id']) && ! isset($validated['is_employee'])) {
+            $validated['is_employee'] = true;
         }
 
         $user->update($validated);
 
-        if ($roleIds !== null) {
-            $user->roles()->sync($roleIds);
+        if (! empty($validated['employee_id'])) {
+            Employee::where('id', $validated['employee_id'])->update(['user_id' => $user->id]);
         }
 
         ActivityLogger::log('User Updated', "Updated user: {$user->name} ({$user->email})", $user);
 
-        return new UserResource($user->load('roles'));
+        return new UserResource($user->load(['role', 'employee']));
     }
 
     public function resendInvite(int|string $id): JsonResponse

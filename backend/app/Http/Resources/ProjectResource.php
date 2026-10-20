@@ -45,6 +45,7 @@ class ProjectResource extends JsonResource
             'lead_id' => $this->lead_id,
             'project_manager_id' => $this->project_manager_id,
             'manager' => new UserResource($this->whenLoaded('manager')),
+            'lead' => new UserResource($this->whenLoaded('lead')),
             'stage_id' => $this->stage_id,
             'stage' => $this->whenLoaded('stage'),
             'project_type' => $this->project_type,

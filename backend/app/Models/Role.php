@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Role extends BaseModel
 {
@@ -23,9 +24,9 @@ class Role extends BaseModel
         'is_delete' => 'boolean',
     ];
 
-    public function users(): BelongsToMany
+    public function users(): HasMany
     {
-        return $this->belongsToMany(User::class, 'role_user');
+        return $this->hasMany(User::class);
     }
 
     public function permissions(): BelongsToMany

@@ -31,10 +31,8 @@ class UserManagementAndAuthTest extends TestCase
         $payload = [
             'name' => 'John Doe',
             'email' => 'john.doe@example.com',
-            'phone' => '+94 77 123 4567',
-            'designation' => 'Software Engineer',
-            'department' => 'Engineering',
-            'role_ids' => $role ? [$role->id] : [],
+            'role_id' => $role->id,
+            'is_employee' => false,
         ];
 
         $response = $this->actingAs($admin, 'sanctum')->postJson('/api/v1/users', $payload);
@@ -42,6 +40,7 @@ class UserManagementAndAuthTest extends TestCase
         $response->assertStatus(201)
             ->assertJsonPath('data.name', 'John Doe')
             ->assertJsonPath('data.email', 'john.doe@example.com')
+            ->assertJsonPath('data.role_id', $role->id)
             ->assertJsonPath('data.status', 'Inactive');
 
         $user = User::where('email', 'john.doe@example.com')->first();

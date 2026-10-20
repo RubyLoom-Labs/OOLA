@@ -13,13 +13,13 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'phone' => $this->phone,
             'avatar' => $this->avatar,
-            'role' => $this->role,
-            'designation' => $this->designation,
-            'department' => $this->department,
             'status' => $this->status,
-            'roles' => RoleResource::collection($this->whenLoaded('roles')),
+            'role_id' => $this->role_id,
+            'role' => new RoleResource($this->whenLoaded('role')),
+            'is_employee' => (bool) $this->is_employee,
+            'employee_id' => $this->employee_id,
+            'employee' => new EmployeeResource($this->whenLoaded('employee')),
             'created_at' => $this->created_at?->toISOString(),
         ];
     }

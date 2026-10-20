@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\HasAuditFields;
 use App\Traits\HasIsDelete;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -18,12 +19,11 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'phone',
         'avatar',
-        'role',
-        'designation',
-        'department',
+        'role_id',
         'status',
+        'is_employee',
+        'employee_id',
         'password',
         'is_delete',
         'created_by',
@@ -39,11 +39,24 @@ class User extends Authenticatable
         'deleted_by',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function ($user) {
+            if (empty($user->role_id)) {
+                $defaultRole = Role::where('slug', 'employee')->first() ?? Role::first();
+                if ($defaultRole) {
+                    $user->role_id = $defaultRole->id;
+                }
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_employee' => 'boolean',
             'is_delete' => 'boolean',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
@@ -52,11 +65,19 @@ class User extends Authenticatable
     }
 
     /**
-     * User roles relationship.
+     * User role relationship.
      */
-    public function roles(): BelongsToMany
+    public function role(): BelongsTo
     {
-        return $this->belongsToMany(Role::class, 'role_user')->withPivot('assigned_at');
+        return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * Associated employee profile (if user is an employee).
+     */
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
     }
 
     /**
@@ -64,11 +85,16 @@ class User extends Authenticatable
      */
     public function hasRole(string $roleSlug): bool
     {
-        if ($this->role === 'Super Admin' || $this->role === $roleSlug) {
+        $role = $this->role;
+        if (! $role) {
+            return false;
+        }
+
+        if ($role->slug === 'super-admin' || $role->name === 'Super Admin') {
             return true;
         }
 
-        return $this->roles()->where('slug', $roleSlug)->exists();
+        return $role->slug === $roleSlug || $role->name === $roleSlug;
     }
 
     /**
@@ -76,13 +102,11 @@ class User extends Authenticatable
      */
     public function hasPermission(string $permissionSlug): bool
     {
-        if ($this->role === 'Super Admin') {
+        if ($this->hasRole('super-admin')) {
             return true;
         }
 
-        return $this->roles()->whereHas('permissions', function ($query) use ($permissionSlug) {
-            $query->where('slug', $permissionSlug);
-        })->exists();
+        return $this->role?->permissions()->where('slug', $permissionSlug)->exists() ?? false;
     }
 
     /**

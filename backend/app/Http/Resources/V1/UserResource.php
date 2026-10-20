@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Http\Resources\EmployeeResource;
+use App\Http\Resources\RoleResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -13,12 +15,13 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'phone' => $this->phone,
             'avatar' => $this->avatar,
-            'role' => $this->role,
-            'designation' => $this->designation,
-            'department' => $this->department,
             'status' => $this->status,
+            'role_id' => $this->role_id,
+            'role' => new RoleResource($this->whenLoaded('role')),
+            'is_employee' => (bool) $this->is_employee,
+            'employee_id' => $this->employee_id,
+            'employee' => new EmployeeResource($this->whenLoaded('employee')),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

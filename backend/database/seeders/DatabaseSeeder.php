@@ -89,48 +89,41 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Alex Morgan',
                 'email' => 'admin@ooralabz.com',
-                'phone' => '+94 77 123 4567',
-                'role' => 'Super Admin',
-                'designation' => 'Principal Architect & Lead',
-                'department' => 'Executive',
+                'role_id' => $createdRoles['super-admin']->id,
                 'status' => 'Active',
+                'is_employee' => false,
+                'employee_id' => null,
                 'password' => Hash::make('password123'),
                 'email_verified_at' => now(),
             ]
         );
-        $admin->roles()->syncWithoutDetaching([$createdRoles['super-admin']->id]);
 
         $john = User::firstOrCreate(
             ['email' => 'john@ooralabz.com'],
             [
                 'name' => 'John Wick',
                 'email' => 'john@ooralabz.com',
-                'phone' => '+94 77 234 5678',
-                'role' => 'Sales Manager',
-                'designation' => 'Head of Business Development',
-                'department' => 'Sales',
+                'role_id' => $createdRoles['sales-manager']->id,
                 'status' => 'Active',
+                'is_employee' => false,
+                'employee_id' => null,
                 'password' => Hash::make('password123'),
                 'email_verified_at' => now(),
             ]
         );
-        $john->roles()->syncWithoutDetaching([$createdRoles['sales-manager']->id]);
 
         $mary = User::firstOrCreate(
             ['email' => 'mary@ooralabz.com'],
             [
                 'name' => 'Mary Jane',
                 'email' => 'mary@ooralabz.com',
-                'phone' => '+94 77 345 6789',
-                'role' => 'Developer',
-                'designation' => 'Senior Full Stack Engineer',
-                'department' => 'Engineering',
+                'role_id' => $createdRoles['developer']->id,
                 'status' => 'Active',
+                'is_employee' => true,
                 'password' => Hash::make('password123'),
                 'email_verified_at' => now(),
             ]
         );
-        $mary->roles()->syncWithoutDetaching([$createdRoles['developer']->id]);
 
         // 4. Departments & Designations
         $deptEng = Department::firstOrCreate(['name' => 'Engineering'], ['description' => 'Software & Cloud Infrastructure']);
@@ -156,6 +149,8 @@ class DatabaseSeeder extends Seeder
                 'status' => 'Active',
             ]
         );
+
+        $mary->update(['employee_id' => $empMary->id]);
 
         // 5. Lead Stages & Sources
         $stages = [

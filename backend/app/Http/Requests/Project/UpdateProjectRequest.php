@@ -27,7 +27,7 @@ class UpdateProjectRequest extends FormRequest
             'project_title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'customer_id' => ['sometimes', 'required', 'exists:companies,id'],
-            'lead_id' => ['nullable', 'exists:leads,id'],
+            'lead_id' => ['nullable', 'exists:users,id'],
             'project_manager_id' => ['nullable', 'exists:users,id'],
             'stage_id' => ['nullable', 'exists:project_stages,id'],
             'project_type' => ['nullable', 'string', 'max:100'],
@@ -41,6 +41,8 @@ class UpdateProjectRequest extends FormRequest
             'cost' => ['nullable', 'numeric', 'min:0'],
             'revenue' => ['nullable', 'numeric', 'min:0'],
             'profit' => ['nullable', 'numeric'],
+            'user_ids' => ['nullable', 'array'],
+            'user_ids.*' => ['exists:users,id'],
         ];
     }
 }

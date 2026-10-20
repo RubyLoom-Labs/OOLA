@@ -154,7 +154,7 @@ class Project extends BaseModel
 
     public function lead(): BelongsTo
     {
-        return $this->belongsTo(Lead::class);
+        return $this->belongsTo(User::class, 'lead_id');
     }
 
     public function manager(): BelongsTo
