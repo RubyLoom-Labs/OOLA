@@ -16,13 +16,17 @@ trait HasAuditFields
     {
         static::creating(function (Model $model) {
             if (Auth::check() && empty($model->created_by)) {
-                $model->created_by = Auth::id();
+                if (in_array('created_by', $model->getFillable()) || \Illuminate\Support\Facades\Schema::hasColumn($model->getTable(), 'created_by')) {
+                    $model->created_by = Auth::id();
+                }
             }
         });
 
         static::updating(function (Model $model) {
             if (Auth::check() && $model->isDirty()) {
-                $model->updated_by = Auth::id();
+                if (in_array('updated_by', $model->getFillable()) || \Illuminate\Support\Facades\Schema::hasColumn($model->getTable(), 'updated_by')) {
+                    $model->updated_by = Auth::id();
+                }
             }
         });
     }

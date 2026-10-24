@@ -214,4 +214,77 @@ class UserManagementAndAuthTest extends TestCase
         $inactiveEmails = collect($responseInactive->json('data'))->pluck('email')->toArray();
         $this->assertContains('filter.inactive@test.com', $inactiveEmails);
     }
+
+    public function test_users_employees_endpoint_returns_only_active_employees_with_pagination(): void
+    {
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+
+        // Active employee
+        User::create([
+            'name' => 'Active Employee Test',
+            'email' => 'active.emp@test.com',
+            'password' => Hash::make('password'),
+            'status' => 'Active',
+            'is_employee' => true,
+        ]);
+
+        // Inactive employee (should NOT be returned)
+        User::create([
+            'name' => 'Inactive Employee Test',
+            'email' => 'inactive.emp@test.com',
+            'password' => Hash::make('password'),
+            'status' => 'Inactive',
+            'is_employee' => true,
+        ]);
+
+        // Active non-employee (should NOT be returned)
+        User::create([
+            'name' => 'Active Non-Employee Test',
+            'email' => 'active.nonemp@test.com',
+            'password' => Hash::make('password'),
+            'status' => 'Active',
+            'is_employee' => false,
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')->getJson('/api/v1/users/employees?page=1&per_page=20');
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => [
+                        'id',
+                        'name',
+                        'email',
+                        'status',
+                        'role_id',
+                        'is_employee',
+                    ],
+                ],
+                'links' => ['first', 'last', 'prev', 'next'],
+                'meta' => ['current_page', 'from', 'last_page', 'per_page', 'to', 'total'],
+            ]);
+
+        $emails = collect($response->json('data'))->pluck('email')->toArray();
+
+        // Must contain active employees
+        $this->assertContains('active.emp@test.com', $emails);
+        $this->assertContains('mary@ooralabz.com', $emails);
+
+        // Must NOT contain inactive employees or non-employees
+        $this->assertNotContains('inactive.emp@test.com', $emails);
+        $this->assertNotContains('active.nonemp@test.com', $emails);
+        $this->assertNotContains('admin@ooralabz.com', $emails);
+
+        // Alias endpoint /api/v1/users/active-employees behaves identically
+        $aliasResponse = $this->actingAs($admin, 'sanctum')->getJson('/api/v1/users/active-employees?page=1&per_page=20');
+        $aliasResponse->assertStatus(200);
+        $aliasEmails = collect($aliasResponse->json('data'))->pluck('email')->toArray();
+        $this->assertEquals($emails, $aliasEmails);
+
+        // Query params /api/v1/users?status=Active&is_employee=true behaves identically
+        $filterResponse = $this->actingAs($admin, 'sanctum')->getJson('/api/v1/users?page=1&per_page=20&status=Active&is_employee=true');
+        $filterResponse->assertStatus(200);
+        $filterEmails = collect($filterResponse->json('data'))->pluck('email')->toArray();
+        $this->assertEquals($emails, $filterEmails);
+    }
 }

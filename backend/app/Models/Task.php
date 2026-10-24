@@ -17,6 +17,7 @@ class Task extends BaseModel
         'task_type',
         'priority',
         'task_stage_id',
+        'project_id',
         'status',
         'taskable_type',
         'taskable_id',
@@ -38,6 +39,23 @@ class Task extends BaseModel
         'actual_minutes' => 'integer',
         'is_delete' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Task $task) {
+            if (! empty($task->project_id) && empty($task->taskable_id)) {
+                $task->taskable_type = Project::class;
+                $task->taskable_id = $task->project_id;
+            } elseif (! empty($task->taskable_id) && ($task->taskable_type === Project::class || $task->taskable_type === 'Project') && empty($task->project_id)) {
+                $task->project_id = $task->taskable_id;
+            }
+        });
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'project_id');
+    }
 
     public function taskable(): MorphTo
     {

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
@@ -79,16 +80,18 @@ class Contact extends BaseModel
     }
 
     /**
-     * Direct projects assigned to this contact.
+     * Direct projects assigned to this contact via project_contact pivot.
      */
-    public function projects(): HasMany
+    public function projects(): BelongsToMany
     {
-        return $this->hasMany(Project::class, 'contact_id');
+        return $this->belongsToMany(Project::class, 'project_contact')
+            ->withTimestamps();
     }
 
-    public function directProjects(): HasMany
+    public function directProjects(): BelongsToMany
     {
-        return $this->hasMany(Project::class, 'contact_id');
+        return $this->belongsToMany(Project::class, 'project_contact')
+            ->withTimestamps();
     }
 
     /**

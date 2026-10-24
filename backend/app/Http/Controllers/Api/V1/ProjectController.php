@@ -46,10 +46,11 @@ class ProjectController extends Controller
     {
         $project = $this->service->createProject(
             $request->validated(),
-            $request->input('user_ids', [])
+            $request->input('user_ids', []),
+            $request->input('contact_ids', [])
         );
 
-        return (new ProjectResource($project->load(['customer', 'manager', 'stage', 'users'])))
+        return (new ProjectResource($project->load(['customer', 'manager', 'stage', 'users', 'contacts'])))
             ->response()
             ->setStatusCode(201);
     }
@@ -62,6 +63,8 @@ class ProjectController extends Controller
             'manager',
             'stage',
             'users',
+            'contacts',
+            'attachments.uploader',
             'tasks.users',
             'tasks.subtasks',
             'tasks.stage',
@@ -74,7 +77,7 @@ class ProjectController extends Controller
     {
         $project = $this->service->updateProject($project, $request->validated());
 
-        return new ProjectResource($project->load(['customer', 'manager', 'stage', 'users']));
+        return new ProjectResource($project->load(['customer', 'manager', 'stage', 'users', 'contacts']));
     }
 
     public function updateStage(Request $request, Project $project): JsonResponse

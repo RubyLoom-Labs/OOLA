@@ -25,10 +25,12 @@ use App\Http\Controllers\Api\V1\LeadSourceController;
 use App\Http\Controllers\Api\V1\LeadStageController;
 use App\Http\Controllers\Api\V1\LeaveRequestController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\ProjectAttachmentController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectPriorityController;
 use App\Http\Controllers\Api\V1\ProjectStageController;
 use App\Http\Controllers\Api\V1\ProjectStatusController;
+use App\Http\Controllers\Api\V1\ProjectTaskController;
 use App\Http\Controllers\Api\V1\QuotationController;
 use App\Http\Controllers\Api\V1\QuotationTemplateController;
 use App\Http\Controllers\Api\V1\ReminderController;
@@ -71,6 +73,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/reports/financials', [ReportController::class, 'financials']);
 
         // Users & Roles
+        Route::get('/users/employees', [UserController::class, 'employees']);
+        Route::get('/users/active-employees', [UserController::class, 'employees']);
+        Route::get('/employees/users', [UserController::class, 'employees']);
         Route::post('/users/{id}/resend-invite', [UserController::class, 'resendInvite']);
         Route::apiResource('users', UserController::class);
         Route::get('/roles', [RoleController::class, 'index']);
@@ -114,6 +119,29 @@ Route::prefix('v1')->group(function () {
         Route::get('/projects/priorities', [ProjectPriorityController::class, 'index']);
         Route::match(['post', 'put'], '/projects/{project}/stage', [ProjectController::class, 'updateStage']);
         Route::apiResource('projects', ProjectController::class);
+        // Project Attachments & Documents
+        Route::get('/projects/{project}/attachments', [ProjectAttachmentController::class, 'index']);
+        Route::post('/projects/{project}/attachments', [ProjectAttachmentController::class, 'store']);
+        Route::get('/projects/{project}/attachments/{attachment}', [ProjectAttachmentController::class, 'show']);
+        Route::match(['put', 'patch'], '/projects/{project}/attachments/{attachment}', [ProjectAttachmentController::class, 'update']);
+        Route::delete('/projects/{project}/attachments/{attachment}', [ProjectAttachmentController::class, 'destroy']);
+        Route::post('/projects/{project}/attachments/{attachment}/restore', [ProjectAttachmentController::class, 'restore']);
+
+        Route::get('/projects/{project}/documents', [ProjectAttachmentController::class, 'index']);
+        Route::post('/projects/{project}/documents', [ProjectAttachmentController::class, 'store']);
+        Route::get('/projects/{project}/documents/{attachment}', [ProjectAttachmentController::class, 'show']);
+        Route::match(['put', 'patch'], '/projects/{project}/documents/{attachment}', [ProjectAttachmentController::class, 'update']);
+        Route::delete('/projects/{project}/documents/{attachment}', [ProjectAttachmentController::class, 'destroy']);
+        Route::post('/projects/{project}/documents/{attachment}/restore', [ProjectAttachmentController::class, 'restore']);
+
+        // Project Tasks
+        Route::get('/projects/{project}/tasks', [ProjectTaskController::class, 'index']);
+        Route::get('/projects/{project}/tasks/kanban', [ProjectTaskController::class, 'kanban']);
+        Route::post('/projects/{project}/tasks', [ProjectTaskController::class, 'store']);
+        Route::get('/projects/{project}/tasks/{task}', [ProjectTaskController::class, 'show']);
+        Route::match(['put', 'patch'], '/projects/{project}/tasks/{task}', [ProjectTaskController::class, 'update']);
+        Route::match(['post', 'put'], '/projects/{project}/tasks/{task}/stage', [ProjectTaskController::class, 'updateStage']);
+        Route::delete('/projects/{project}/tasks/{task}', [ProjectTaskController::class, 'destroy']);
 
         // Project Statuses (Active records where is_delete = 0)
         Route::get('/project-statuses/delivery', [ProjectStatusController::class, 'deliveryStatuses']);
@@ -180,6 +208,8 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('communication-logs', CommunicationLogController::class)->only(['index', 'store']);
 
         // Notifications & Activities
+        Route::get('/notifications/stream', [CrmNotificationController::class, 'stream']);
+        Route::post('/notifications/check-reminders', [CrmNotificationController::class, 'checkReminders']);
         Route::get('/notifications', [CrmNotificationController::class, 'index']);
         Route::get('/notifications/unread-count', [CrmNotificationController::class, 'unreadCount']);
         Route::post('/notifications/{crmNotification}/read', [CrmNotificationController::class, 'markAsRead']);

@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\CompanyType;
+use App\Models\Contact;
 use App\Models\Project;
 use App\Models\ProjectStage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -156,5 +158,155 @@ class ProjectCompanyLinkTest extends TestCase
         ]);
         $zenithProj2->assertStatus(201)
             ->assertJsonPath('data.project_code', 'PROJO0000022');
+    }
+
+    public function test_project_contact_pivot_and_patch_update_with_contact_ids(): void
+    {
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $company = Company::first();
+        $stage = ProjectStage::first();
+
+        // 1. Assert schema changes: project_contact exists and contact_id is removed from projects
+        $this->assertTrue(Schema::hasTable('project_contact'));
+        if (DB::getDriverName() !== 'sqlite') {
+            $this->assertFalse(Schema::hasColumn('projects', 'contact_id'));
+        }
+
+        // 2. Create sample contacts for this company
+        $contact1 = Contact::create([
+            'company_id' => $company->id,
+            'company' => $company->company_name,
+            'first_name' => 'Alice',
+            'last_name' => 'Smith',
+            'email' => 'alice@test.com',
+            'status' => true,
+        ]);
+
+        $contact2 = Contact::create([
+            'company_id' => $company->id,
+            'company' => $company->company_name,
+            'first_name' => 'Bob',
+            'last_name' => 'Jones',
+            'email' => 'bob@test.com',
+            'status' => true,
+        ]);
+
+        $project = Project::create([
+            'project_title' => 'Initial Project Name',
+            'customer_id' => $company->id,
+            'stage_id' => $stage->id,
+            'status' => 'In Progress',
+            'budget' => 10000,
+        ]);
+
+        // 3. Perform PATCH request matching user frontend format
+        $patchPayload = [
+            'project_title' => 'Enterprise Cloud Migration',
+            'customer_id' => $company->id,
+            'description' => "Migrating core infrastructure to AWS with hybrid connectivity.\n\n\ntest",
+            'lead_id' => $admin->id,
+            'project_manager_id' => $admin->id,
+            'stage_id' => $stage->id,
+            'project_type' => 'Cloud Infrastructure',
+            'priority' => 'High',
+            'status' => 'Completed',
+            'start_date' => '2026-10-07',
+            'expected_end_date' => '2026-12-30',
+            'actual_end_date' => '2026-10-23',
+            'budget' => 25000,
+            'quoted_amount' => 285000,
+            'cost' => 12000,
+            'revenue' => 44,
+            'profit' => 444,
+            'contact_ids' => [
+                $contact1->id,
+                $contact2->id,
+            ],
+        ];
+
+        $patchResponse = $this->actingAs($admin, 'sanctum')->patchJson("/api/v1/projects/{$project->id}", $patchPayload);
+
+        $patchResponse->assertStatus(200)
+            ->assertJsonPath('data.project_title', 'Enterprise Cloud Migration')
+            ->assertJsonPath('data.status', 'Completed')
+            ->assertJsonPath('data.project_type', 'Cloud Infrastructure')
+            ->assertJsonPath('data.actual_end_date', '2026-10-23')
+            ->assertJsonPath('data.revenue', 44)
+            ->assertJsonPath('data.profit', 444)
+            ->assertJsonPath('data.contact_ids', [$contact1->id, $contact2->id]);
+
+        // Verify project_contact pivot table records
+        $this->assertDatabaseHas('project_contact', [
+            'project_id' => $project->id,
+            'contact_id' => $contact1->id,
+        ]);
+        $this->assertDatabaseHas('project_contact', [
+            'project_id' => $project->id,
+            'contact_id' => $contact2->id,
+        ]);
+
+        // 4. Fetch GET /api/v1/projects/{id} and verify fields and contacts
+        $getResponse = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/projects/{$project->id}");
+        $getResponse->assertStatus(200)
+            ->assertJsonPath('data.project_title', 'Enterprise Cloud Migration')
+            ->assertJsonPath('data.actual_end_date', '2026-10-23')
+            ->assertJsonPath('data.revenue', 44)
+            ->assertJsonPath('data.profit', 444)
+            ->assertJsonPath('data.contact_ids', [$contact1->id, $contact2->id]);
+
+        $this->assertCount(2, $getResponse->json('data.contacts'));
+    }
+
+    public function test_project_store_creates_project_with_contacts_and_missing_fields(): void
+    {
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $company = Company::first();
+        $stage = ProjectStage::first();
+
+        $contact = Contact::create([
+            'company_id' => $company->id,
+            'company' => $company->company_name,
+            'first_name' => 'Carol',
+            'last_name' => 'Danvers',
+            'email' => 'carol@test.com',
+            'status' => true,
+        ]);
+
+        $createPayload = [
+            'project_title' => 'Brand New Infrastructure Project',
+            'customer_id' => $company->id,
+            'description' => 'Test project creation',
+            'lead_id' => $admin->id,
+            'project_manager_id' => $admin->id,
+            'stage_id' => $stage->id,
+            'project_type' => 'Cloud Infrastructure',
+            'priority' => 'High',
+            'status' => 'In Progress',
+            'start_date' => '2026-10-01',
+            'expected_end_date' => '2026-11-30',
+            'actual_end_date' => '2026-11-20',
+            'budget' => 50000,
+            'quoted_amount' => 55000,
+            'cost' => 20000,
+            'revenue' => 55000,
+            'profit' => 35000,
+            'contact_ids' => [$contact->id],
+        ];
+
+        $postResponse = $this->actingAs($admin, 'sanctum')->postJson('/api/v1/projects', $createPayload);
+
+        $postResponse->assertStatus(201)
+            ->assertJsonPath('data.project_title', 'Brand New Infrastructure Project')
+            ->assertJsonPath('data.actual_end_date', '2026-11-20')
+            ->assertJsonPath('data.revenue', 55000)
+            ->assertJsonPath('data.profit', 35000)
+            ->assertJsonPath('data.contact_ids', [$contact->id]);
+
+        $projectId = $postResponse->json('data.id');
+
+        $this->assertDatabaseHas('project_contact', [
+            'project_id' => $projectId,
+            'contact_id' => $contact->id,
+        ]);
     }
 }

@@ -57,10 +57,23 @@ class UserController extends Controller
             });
         }
 
-        $perPage = (int) $request->input('per_page', 0);
+        $perPage = (int) $request->input('per_page', $request->has('page') ? 20 : 0);
         $users = $perPage > 0 ? $query->latest()->paginate($perPage) : $query->latest()->get();
 
         return UserResource::collection($users);
+    }
+
+    /**
+     * Get active users who are employees only.
+     */
+    public function employees(Request $request): AnonymousResourceCollection
+    {
+        $request->merge([
+            'status' => 'Active',
+            'is_employee' => true,
+        ]);
+
+        return $this->index($request);
     }
 
     public function store(Request $request): JsonResponse

@@ -2,10 +2,14 @@
 
 namespace App\Services;
 
+use App\Mail\TaskAssignmentMail;
 use App\Models\Lead;
 use App\Models\Project;
+use App\Models\Reminder;
 use App\Models\Task;
 use App\Models\TaskStage;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
@@ -27,7 +31,13 @@ class TaskService
         }
 
         if (! empty($filters['taskable_type']) && ! empty($filters['taskable_id'])) {
-            $query->where('taskable_type', $filters['taskable_type'])
+            $type = $filters['taskable_type'];
+            if ($type === 'project' || $type === 'Project') {
+                $type = Project::class;
+            } elseif ($type === 'lead' || $type === 'Lead') {
+                $type = Lead::class;
+            }
+            $query->where('taskable_type', $type)
                 ->where('taskable_id', $filters['taskable_id']);
         }
 
@@ -55,6 +65,12 @@ class TaskService
 
     public function getKanban(?string $taskableType = null, ?int $taskableId = null): Collection
     {
+        if ($taskableType === 'project' || $taskableType === 'Project') {
+            $taskableType = Project::class;
+        } elseif ($taskableType === 'lead' || $taskableType === 'Lead') {
+            $taskableType = Lead::class;
+        }
+
         return TaskStage::with(['tasks' => function ($query) use ($taskableType, $taskableId) {
             if ($taskableType && $taskableId) {
                 $query->where('taskable_type', $taskableType)
@@ -68,7 +84,40 @@ class TaskService
 
     public function createTask(array $data, ?array $userIds = []): Task
     {
-        // Enforce Lead / Project assignment constraint (PRD Section 25)
+        // Normalize taskable_type
+        if (! empty($data['taskable_type'])) {
+            if ($data['taskable_type'] === 'project' || $data['taskable_type'] === 'Project') {
+                $data['taskable_type'] = Project::class;
+            } elseif ($data['taskable_type'] === 'lead' || $data['taskable_type'] === 'Lead') {
+                $data['taskable_type'] = Lead::class;
+            }
+        }
+
+        // Map stage slug or string to task_stage_id if not explicitly provided
+        if (empty($data['task_stage_id']) && ! empty($data['stage'])) {
+            $stageMap = [
+                'to-do' => 1,
+                'todo' => 1,
+                'in-progress' => 2,
+                'review' => 3,
+                'completed' => 4,
+            ];
+            $stageKey = strtolower($data['stage']);
+            if (isset($stageMap[$stageKey])) {
+                $data['task_stage_id'] = $stageMap[$stageKey];
+            } else {
+                $foundStage = TaskStage::where('slug', $stageKey)->orWhere('name', $data['stage'])->first();
+                if ($foundStage) {
+                    $data['task_stage_id'] = $foundStage->id;
+                }
+            }
+        }
+        unset($data['stage']);
+
+        $reminderOption = $data['reminder'] ?? null;
+        unset($data['reminder']);
+
+        // Enforce Lead / Project assignment constraint
         if (! empty($data['taskable_type']) && ! empty($data['taskable_id']) && ! empty($userIds)) {
             $this->validateTaskAssignment($data['taskable_type'], (int) $data['taskable_id'], $userIds);
         }
@@ -81,28 +130,60 @@ class TaskService
 
         if (! empty($userIds)) {
             $task->users()->sync($userIds);
+            $this->notifyAssignedUsers($task, $userIds);
+        }
+
+        // Setup reminder if due date and reminder option specified
+        if (! empty($task->due_date) && ! empty($reminderOption) && ! empty($userIds)) {
+            $this->scheduleTaskReminders($task, $userIds, $reminderOption);
         }
 
         ActivityLogger::log('Task Created', "Created task: {$task->title}", $task);
-
-        if (! empty($userIds)) {
-            NotificationService::sendMany(
-                $userIds,
-                'New Task Assigned',
-                "Task assigned: {$task->title}",
-                'task',
-                "/tasks/{$task->id}"
-            );
-        }
 
         return $task;
     }
 
     public function updateTask(Task $task, array $data, ?array $userIds = null): Task
     {
-        if ($userIds !== null && $task->taskable_type && $task->taskable_id) {
-            $this->validateTaskAssignment($task->taskable_type, $task->taskable_id, $userIds);
+        $reminderOption = $data['reminder'] ?? null;
+        unset($data['reminder']);
+
+        if (! empty($data['stage'])) {
+            $stageMap = [
+                'to-do' => 1,
+                'todo' => 1,
+                'in-progress' => 2,
+                'review' => 3,
+                'completed' => 4,
+            ];
+            $stageKey = strtolower($data['stage']);
+            if (isset($stageMap[$stageKey])) {
+                $data['task_stage_id'] = $stageMap[$stageKey];
+            } else {
+                $foundStage = TaskStage::where('slug', $stageKey)->orWhere('name', $data['stage'])->first();
+                if ($foundStage) {
+                    $data['task_stage_id'] = $foundStage->id;
+                }
+            }
+            unset($data['stage']);
+        }
+
+        if ($userIds !== null) {
+            if ($task->taskable_type && $task->taskable_id) {
+                $this->validateTaskAssignment($task->taskable_type, $task->taskable_id, $userIds);
+            }
+            $prevIds = $task->users()->pluck('users.id')->toArray();
+            $newlyAddedIds = array_diff($userIds, $prevIds);
+
             $task->users()->sync($userIds);
+
+            if (! empty($newlyAddedIds)) {
+                $this->notifyAssignedUsers($task, $newlyAddedIds);
+            }
+
+            if (! empty($reminderOption) && ! empty($userIds)) {
+                $this->scheduleTaskReminders($task, $userIds, $reminderOption);
+            }
         }
 
         $task->update($data);
@@ -130,6 +211,75 @@ class TaskService
     }
 
     /**
+     * Dispatch in-app notification and email to assigned users.
+     */
+    protected function notifyAssignedUsers(Task $task, array $userIds): void
+    {
+        $project = null;
+        if ($task->taskable_type === Project::class || $task->taskable_type === 'App\\Models\\Project' || $task->taskable_type === 'project') {
+            $project = Project::find($task->taskable_id);
+        }
+
+        $users = User::whereIn('id', $userIds)->get();
+        $actionUrl = $project ? "/projects/{$project->id}?tab=tasks" : "/tasks";
+
+        foreach ($users as $user) {
+            NotificationService::send(
+                user: $user,
+                title: 'New Task Assigned',
+                message: "You have been assigned to task '{$task->title}'" . ($project ? " in project '{$project->project_title}'" : ""),
+                type: 'task',
+                actionUrl: $actionUrl,
+                mailable: new TaskAssignmentMail($user, $task, $project)
+            );
+        }
+    }
+
+    /**
+     * Schedule automated reminder entries for assigned users.
+     */
+    protected function scheduleTaskReminders(Task $task, array $userIds, string $reminderOption): void
+    {
+        if ($reminderOption === 'None' || empty($task->due_date)) {
+            return;
+        }
+
+        $minutesBefore = match($reminderOption) {
+            '30 Mins Before' => 30,
+            '1 Hour Before' => 60,
+            '1 Day Before' => 1440,
+            default => 60,
+        };
+
+        $reminderType = match($reminderOption) {
+            '30 Mins Before' => '30min_before',
+            '1 Hour Before' => '1h_before',
+            '1 Day Before' => '1day_before',
+            default => '1h_before',
+        };
+
+        $dueDate = Carbon::parse($task->due_date);
+        $remindAt = $dueDate->copy()->subMinutes($minutesBefore);
+
+        foreach ($userIds as $userId) {
+            Reminder::updateOrCreate(
+                [
+                    'remindable_type' => Task::class,
+                    'remindable_id' => $task->id,
+                    'user_id' => $userId,
+                ],
+                [
+                    'reminder_type' => $reminderType,
+                    'remind_at' => $remindAt,
+                    'status' => 'pending',
+                    'notification_sent' => false,
+                    'email_sent' => false,
+                ]
+            );
+        }
+    }
+
+    /**
      * Validate that assigned users belong to the parent Lead or Project.
      */
     protected function validateTaskAssignment(string $taskableType, int $taskableId, array $userIds): void
@@ -149,6 +299,10 @@ class TaskService
             $project = Project::find($taskableId);
             if ($project) {
                 $allowedIds = $project->users()->pluck('users.id')->toArray();
+                if ($project->project_manager_id) {
+                    $allowedIds[] = $project->project_manager_id;
+                }
+                $allowedIds = array_unique($allowedIds);
                 $diff = array_diff($userIds, $allowedIds);
                 if (! empty($diff)) {
                     throw ValidationException::withMessages([

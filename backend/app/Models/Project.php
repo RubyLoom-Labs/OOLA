@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Project extends BaseModel
 {
@@ -14,6 +13,7 @@ class Project extends BaseModel
         'project_title',
         'description',
         'customer_id',
+        'company_id',
         'contact_id',
         'lead_id',
         'project_manager_id',
@@ -36,6 +36,8 @@ class Project extends BaseModel
         'deleted_at',
     ];
 
+    protected array $pendingContactIds = [];
+
     protected $casts = [
         'start_date' => 'date',
         'expected_end_date' => 'date',
@@ -52,7 +54,24 @@ class Project extends BaseModel
     {
         static::creating(function (Project $project) {
             if (empty($project->project_code)) {
-                $project->project_code = static::generateProjectCode($project->customer_id);
+                $companyId = $project->customer_id ?? $project->company_id;
+                $project->project_code = static::generateProjectCode($companyId);
+            }
+        });
+
+        static::saving(function (Project $project) {
+            if (empty($project->customer_id) && ! empty($project->company_id)) {
+                $project->customer_id = $project->company_id;
+            }
+            if (empty($project->company_id) && ! empty($project->customer_id)) {
+                $project->company_id = $project->customer_id;
+            }
+        });
+
+        static::saved(function (Project $project) {
+            if (! empty($project->pendingContactIds)) {
+                $project->contacts()->syncWithoutDetaching($project->pendingContactIds);
+                $project->pendingContactIds = [];
             }
         });
     }
@@ -147,9 +166,33 @@ class Project extends BaseModel
         return $this->belongsTo(Company::class, 'customer_id');
     }
 
-    public function contact(): BelongsTo
+    public function contacts(): BelongsToMany
     {
-        return $this->belongsTo(Contact::class);
+        return $this->belongsToMany(Contact::class, 'project_contact')
+            ->withTimestamps();
+    }
+
+    public function getContactIdAttribute(): ?int
+    {
+        return $this->contacts->first()?->id ?? $this->contacts()->value('contacts.id');
+    }
+
+    public function getContactIdsAttribute(): array
+    {
+        return $this->relationLoaded('contacts')
+            ? $this->contacts->pluck('id')->values()->all()
+            : $this->contacts()->pluck('contacts.id')->values()->all();
+    }
+
+    public function setContactIdAttribute($value): void
+    {
+        if ($value) {
+            if ($this->exists) {
+                $this->contacts()->syncWithoutDetaching([$value]);
+            } else {
+                $this->pendingContactIds = array_unique(array_merge($this->pendingContactIds ?? [], [$value]));
+            }
+        }
     }
 
     public function lead(): BelongsTo
@@ -174,9 +217,9 @@ class Project extends BaseModel
             ->withTimestamps();
     }
 
-    public function tasks(): MorphMany
+    public function tasks(): HasMany
     {
-        return $this->morphMany(Task::class, 'taskable');
+        return $this->hasMany(Task::class, 'project_id');
     }
 
     public function payments(): HasMany
@@ -194,9 +237,14 @@ class Project extends BaseModel
         return $this->hasMany(Quotation::class);
     }
 
-    public function attachments(): MorphMany
+    public function documents(): HasMany
     {
-        return $this->morphMany(Attachment::class, 'attachable');
+        return $this->hasMany(ProjectDocument::class, 'project_id');
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ProjectDocument::class, 'project_id');
     }
 
     /**

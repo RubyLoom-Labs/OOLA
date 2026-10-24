@@ -18,6 +18,12 @@ class TaskResource extends JsonResource
             'priority' => $this->priority,
             'task_stage_id' => $this->task_stage_id,
             'stage' => $this->whenLoaded('stage'),
+            'project_id' => $this->project_id ?? ($this->taskable_type === 'App\\Models\\Project' || $this->taskable_type === 'Project' ? (int) $this->taskable_id : null),
+            'project' => $this->whenLoaded('project', fn () => [
+                'id' => $this->project->id,
+                'project_title' => $this->project->project_title,
+                'project_code' => $this->project->project_code,
+            ]),
             'status' => $this->status,
             'taskable_type' => $this->taskable_type,
             'taskable_id' => $this->taskable_id,

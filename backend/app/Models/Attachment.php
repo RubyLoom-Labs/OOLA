@@ -2,11 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\HasIsDelete;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\Auth;
 
-class Attachment extends BaseModel
+class Attachment extends Model
 {
+    use HasFactory, HasIsDelete;
+
     protected $fillable = [
         'attachable_type',
         'attachable_id',
@@ -24,6 +30,15 @@ class Attachment extends BaseModel
         'file_size' => 'integer',
         'is_delete' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function ($model) {
+            if (Auth::check() && empty($model->uploaded_by)) {
+                $model->uploaded_by = Auth::id();
+            }
+        });
+    }
 
     public function attachable(): MorphTo
     {
