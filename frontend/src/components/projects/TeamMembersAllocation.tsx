@@ -89,6 +89,7 @@ export default function TeamMembersAllocation({
           per_page: 20,
           search: search.trim() || undefined,
           status: 'Active',
+          is_employee: true,
         })
 
         const newUsers = Array.isArray(res.data) ? res.data : []

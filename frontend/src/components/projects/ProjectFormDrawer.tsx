@@ -526,6 +526,8 @@ export default function ProjectFormDrawer({
                           setSelectedManager(u)
                         }}
                         placeholder="Select Project Manager..."
+                        isEmployee={true}
+                        status="Active"
                       />
                     </div>
                     <div className="form-group min-w-0">
@@ -539,6 +541,8 @@ export default function ProjectFormDrawer({
                           setSelectedLead(u)
                         }}
                         placeholder="Select Associated Lead..."
+                        isEmployee={true}
+                        status="Active"
                       />
                     </div>
                   </div>
@@ -598,13 +602,13 @@ export default function ProjectFormDrawer({
                   <div className="grid grid-cols-3 gap-2.5">
                     <div className="form-group min-w-0">
                       <label className="form-label text-xs">Allocated Budget</label>
-                      <div className="relative">
-                        <span className="absolute left-2.5 top-2 text-xs text-slate-400 font-semibold">$</span>
+                      <div className="input-with-prefix">
+                        <span className="input-prefix">$</span>
                         <input
                           type="number"
                           step="0.01"
                           min="0"
-                          className="form-input form-input-sm pl-6"
+                          className="form-input form-input-sm"
                           placeholder="0.00"
                           value={budget}
                           onChange={(e) => setBudget(e.target.value)}
@@ -613,13 +617,13 @@ export default function ProjectFormDrawer({
                     </div>
                     <div className="form-group min-w-0">
                       <label className="form-label text-xs">Quoted Price</label>
-                      <div className="relative">
-                        <span className="absolute left-2.5 top-2 text-xs text-slate-400 font-semibold">$</span>
+                      <div className="input-with-prefix">
+                        <span className="input-prefix">$</span>
                         <input
                           type="number"
                           step="0.01"
                           min="0"
-                          className="form-input form-input-sm pl-6"
+                          className="form-input form-input-sm"
                           placeholder="0.00"
                           value={quotedAmount}
                           onChange={(e) => setQuotedAmount(e.target.value)}
@@ -628,13 +632,13 @@ export default function ProjectFormDrawer({
                     </div>
                     <div className="form-group min-w-0">
                       <label className="form-label text-xs">Total Cost</label>
-                      <div className="relative">
-                        <span className="absolute left-2.5 top-2 text-xs text-slate-400 font-semibold">$</span>
+                      <div className="input-with-prefix">
+                        <span className="input-prefix">$</span>
                         <input
                           type="number"
                           step="0.01"
                           min="0"
-                          className="form-input form-input-sm pl-6"
+                          className="form-input form-input-sm"
                           placeholder="0.00"
                           value={cost}
                           onChange={(e) => setCost(e.target.value)}
@@ -646,13 +650,13 @@ export default function ProjectFormDrawer({
                   <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
                     <div className="form-group min-w-0">
                       <label className="form-label text-xs">Realized Revenue</label>
-                      <div className="relative">
-                        <span className="absolute left-2.5 top-2 text-xs text-slate-400 font-semibold">$</span>
+                      <div className="input-with-prefix">
+                        <span className="input-prefix">$</span>
                         <input
                           type="number"
                           step="0.01"
                           min="0"
-                          className="form-input form-input-sm pl-6"
+                          className="form-input form-input-sm"
                           placeholder="0.00"
                           value={revenue}
                           onChange={(e) => setRevenue(e.target.value)}
@@ -661,12 +665,12 @@ export default function ProjectFormDrawer({
                     </div>
                     <div className="form-group min-w-0">
                       <label className="form-label text-xs">Net Profit</label>
-                      <div className="relative">
-                        <span className="absolute left-2.5 top-2 text-xs text-slate-400 font-semibold">$</span>
+                      <div className="input-with-prefix">
+                        <span className="input-prefix">$</span>
                         <input
                           type="number"
                           step="0.01"
-                          className="form-input form-input-sm pl-6"
+                          className="form-input form-input-sm"
                           placeholder="0.00"
                           value={profit}
                           onChange={(e) => setProfit(e.target.value)}

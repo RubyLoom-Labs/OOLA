@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@/context/AuthContext'
+import { NotificationProvider } from '@/context/NotificationContext'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import AppLayout from '@/components/layout/AppLayout'
 import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import Leads from '@/pages/Leads'
 import Contacts from '@/pages/Contacts'
+import Users from '@/pages/Users'
 import Companies from '@/pages/Companies'
 import CreateQuotation from '@/pages/quotes/CreateQuotation'
 import Projects from '@/pages/Projects'
@@ -16,7 +18,8 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
+        <NotificationProvider>
+          <Routes>
           {/* Public Authentication Route */}
           <Route path="/login" element={<Login />} />
 
@@ -28,6 +31,7 @@ function App() {
               <Route path="/companies" element={<Companies />} />
               <Route path="/customers" element={<Navigate to="/companies" replace />} />
               <Route path="/contacts" element={<Contacts />} />
+              <Route path="/users" element={<Users />} />
               <Route
                 path="/accounts"
                 element={
@@ -141,6 +145,7 @@ function App() {
           {/* Fallback wildcard */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   )

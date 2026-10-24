@@ -648,13 +648,13 @@ body {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  margin-bottom: 4px;
+  margin-bottom: 16px;
 }
 
 .breadcrumb-item {
   color: var(--color-gray-500);
   text-decoration: none;
-  font-weight: 400;
+  font-weight: 500;
   transition: color 0.15s ease;
 }
 
@@ -668,8 +668,8 @@ body {
 }
 
 .breadcrumb-current {
-  color: var(--color-gray-500);
-  font-weight: 400;
+  color: var(--color-gray-700);
+  font-weight: 600;
 }
 
 /* ── Page Header ── */
@@ -877,6 +877,16 @@ body {
   color: var(--color-gray-600);
 }
 
+.badge-info {
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+}
+
+.badge-neutral {
+  background: var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+
 .badge-draft {
   background: #e0f2fe;
   color: #0369a1;
@@ -937,6 +947,63 @@ body {
 .form-input-sm {
   height: 34px;
   font-size: 13px;
+}
+
+/* ── Input with Prefix Icon/Symbol ── */
+.input-with-prefix {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-with-prefix .input-prefix {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.input-with-prefix .form-input,
+.input-with-prefix input {
+  padding-left: 24px !important;
+}
+
+/* ── Input with Icon Prefix (Link, Search, Mail, etc.) ── */
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-with-icon .input-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.input-with-icon .form-input,
+.input-with-icon input {
+  padding-left: 34px !important;
 }
 
 textarea.form-input,
@@ -2553,6 +2620,13 @@ textarea.form-input-sm,
   margin-top: 3px;
 }
 
+.module-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 /* ── Stat Cards ── */
 .contacts-stats-grid {
   display: grid;
@@ -2743,6 +2817,7 @@ textarea.form-input-sm,
 .table-responsive {
   min-height: 220px;
   position: relative;
+  overflow-x: auto;
 }
 
 .contacts-table,
@@ -4934,16 +5009,18 @@ textarea.form-input-sm,
   align-items: center;
   gap: 4px;
   border-bottom: 1px solid #e9ecf0;
-  padding: 0 24px;
+  padding: 0 20px;
   overflow-x: auto;
   flex-shrink: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .cvd-tabs::-webkit-scrollbar { display: none; }
 
 .cvd-tab {
-  padding: 10px 14px;
-  font-size: 13.5px;
+  padding: 10px 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #64748b;
   background: transparent;
@@ -4952,6 +5029,7 @@ textarea.form-input-sm,
   cursor: pointer;
   white-space: nowrap;
   transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
 }
 
 .cvd-tab:hover { color: #2563eb; }
@@ -4960,6 +5038,17 @@ textarea.form-input-sm,
   color: #2563eb;
   border-bottom-color: #2563eb;
   font-weight: 600;
+}
+
+/* Specific styling for Project drawer with 5 tabs */
+.project-view-drawer .cvd-tabs {
+  padding: 0 16px;
+  gap: 2px;
+}
+
+.project-view-drawer .cvd-tab {
+  padding: 10px 10px;
+  font-size: 13px;
 }
 
 /* ── Scrollable Body ── */

@@ -78,8 +78,29 @@ export interface Project {
   revenue?: number | null
   profit?: number | null
   users?: ProjectUser[]
+  attachments?: ProjectAttachment[]
   tasks_count?: number | null
   payments_count?: number | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ProjectAttachment {
+  id: number
+  document_name?: string
+  document_title?: string
+  file_name?: string
+  type?: string
+  category?: string
+  file_path: string
+  mime_type?: string | null
+  file_size?: number | null
+  uploaded_by?: number | null
+  uploader?: {
+    id: number
+    name: string
+    email?: string
+  } | null
   created_at?: string
   updated_at?: string
 }
@@ -186,6 +207,7 @@ export function normalizeProject(p: Project): Project {
     cost: p.cost !== null && p.cost !== undefined ? Number(p.cost) : 0,
     revenue: p.revenue !== null && p.revenue !== undefined ? Number(p.revenue) : 0,
     profit: p.profit !== null && p.profit !== undefined ? Number(p.profit) : 0,
+    attachments: Array.isArray(p.attachments) ? p.attachments : [],
   }
 }
 
@@ -387,7 +409,11 @@ export const projectsApi = {
    */
   async getUsers(): Promise<ApiResponse<ProjectUser[]>> {
     try {
-      const res = await apiClient.get<ApiResponse<ProjectUser[]>>('/users')
+      const res = await apiClient.get<ApiResponse<ProjectUser[]>>('/users', {
+        status: 'Active',
+        is_employee: true,
+        per_page: 20,
+      })
       const rawList = (res as any)?.data?.data || res?.data || []
       return { data: Array.isArray(rawList) ? rawList : [] }
     } catch (err) {
@@ -409,6 +435,71 @@ export const projectsApi = {
       console.error('Failed to load leads:', err)
       return { data: [] }
     }
+  },
+
+  /**
+   * GET /api/v1/projects/{id}/attachments
+   * Retrieve list of document attachments for project
+   */
+  async getAttachments(projectId: number | string): Promise<ApiResponse<ProjectAttachment[]>> {
+    try {
+      const res = await apiClient.get<ApiResponse<ProjectAttachment[]>>(`/projects/${projectId}/attachments`)
+      const raw = (res as any)?.data?.data || res?.data || []
+      return { data: Array.isArray(raw) ? raw : [] }
+    } catch (err) {
+      console.error('Failed to load project attachments:', err)
+      return { data: [] }
+    }
+  },
+
+  /**
+   * POST /api/v1/projects/{id}/attachments
+   * Upload file or create document attachment for project
+   */
+  async uploadAttachment(
+    projectId: number | string,
+    formData: FormData
+  ): Promise<ApiResponse<ProjectAttachment>> {
+    return await apiClient.post<ApiResponse<ProjectAttachment>>(
+      `/projects/${projectId}/attachments`,
+      formData
+    )
+  },
+
+  /**
+   * POST /api/v1/projects/{id}/attachments
+   * Create document attachment by URL/link
+   */
+  async createAttachmentLink(
+    projectId: number | string,
+    payload: {
+      file_name?: string
+      document_name?: string
+      document_title?: string
+      file_url: string
+      type?: string
+      category?: string
+      file_size?: number
+      mime_type?: string
+    }
+  ): Promise<ApiResponse<ProjectAttachment>> {
+    return await apiClient.post<ApiResponse<ProjectAttachment>>(
+      `/projects/${projectId}/attachments`,
+      payload
+    )
+  },
+
+  /**
+   * DELETE /api/v1/projects/{id}/attachments/{attachmentId}
+   * Remove project document attachment
+   */
+  async deleteAttachment(
+    projectId: number | string,
+    attachmentId: number | string
+  ): Promise<ApiResponse<{ message: string }>> {
+    return await apiClient.delete<ApiResponse<{ message: string }>>(
+      `/projects/${projectId}/attachments/${attachmentId}`
+    )
   },
 }
 

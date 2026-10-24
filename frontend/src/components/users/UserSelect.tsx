@@ -25,6 +25,7 @@ interface UserSelectProps {
   className?: string
   error?: string | null
   status?: string
+  isEmployee?: boolean
 }
 
 const AVATAR_COLORS = [
@@ -64,6 +65,7 @@ export default function UserSelect({
   className = '',
   error = null,
   status = 'Active',
+  isEmployee = true,
 }: UserSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -87,7 +89,7 @@ export default function UserSelect({
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  // Fetch users from API (20 records per page)
+  // Fetch users from API (20 records per page, employees only by default)
   const fetchUsers = useCallback(
     async (pageNumber: number, search: string, isInitialOrSearch: boolean) => {
       if (isInitialOrSearch) {
@@ -102,6 +104,7 @@ export default function UserSelect({
           per_page: 20,
           search: search.trim() || undefined,
           status,
+          is_employee: isEmployee,
         })
 
         const newUsers = Array.isArray(res.data) ? res.data : []
@@ -128,7 +131,7 @@ export default function UserSelect({
         setLoadingMore(false)
       }
     },
-    [status]
+    [status, isEmployee]
   )
 
   // Trigger search or initial load

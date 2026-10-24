@@ -320,6 +320,7 @@ export default function Projects() {
     {
       key: 'project',
       header: 'PROJECT',
+      className: 'min-w-[260px]',
       accessor: (project: Project) => {
         return (
           <div className="flex items-center gap-3">
@@ -348,6 +349,7 @@ export default function Projects() {
     {
       key: 'client',
       header: 'CLIENT / ORGANIZATION',
+      className: 'min-w-[190px]',
       accessor: (project: Project) => {
         if (!project.customer) {
           return <span className="text-xs text-gray-400 italic">No client</span>
@@ -372,20 +374,23 @@ export default function Projects() {
     {
       key: 'stage',
       header: 'STAGE',
+      width: '140px',
+      className: 'whitespace-nowrap',
+      headerClassName: 'whitespace-nowrap',
       accessor: (project: Project) => {
         const stage = stages.find((s) => s.id === project.stage_id) || project.stage
         const color = stage?.color || '#64748B'
         return (
           <span
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0"
             style={{
               backgroundColor: `${color}15`,
               color: color,
               border: `1px solid ${color}35`,
             }}
           >
-            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
-            {stage?.name || '—'}
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+            <span>{stage?.name || '—'}</span>
           </span>
         )
       },
@@ -393,9 +398,12 @@ export default function Projects() {
     {
       key: 'status',
       header: 'STATUS',
+      width: '130px',
+      className: 'whitespace-nowrap',
+      headerClassName: 'whitespace-nowrap',
       accessor: (project: Project) => {
         return (
-          <span className={`badge text-xs ${getStatusBadgeClass(project.status)}`}>
+          <span className={`badge text-xs whitespace-nowrap ${getStatusBadgeClass(project.status)}`}>
             {project.status || 'Not Started'}
           </span>
         )
@@ -404,12 +412,15 @@ export default function Projects() {
     {
       key: 'priority',
       header: 'PRIORITY',
+      width: '130px',
+      className: 'whitespace-nowrap',
+      headerClassName: 'whitespace-nowrap',
       accessor: (project: Project) => {
         const displayPriority = project.priority?.includes('Priority')
           ? project.priority
           : `${project.priority || 'Low'} Priority`
         return (
-          <span className={`badge text-xs ${getPriorityBadgeClass(project.priority)}`}>
+          <span className={`badge text-xs whitespace-nowrap ${getPriorityBadgeClass(project.priority)}`}>
             {displayPriority}
           </span>
         )
@@ -418,9 +429,12 @@ export default function Projects() {
     {
       key: 'timeline',
       header: 'TIMELINE',
+      width: '150px',
+      className: 'whitespace-nowrap',
+      headerClassName: 'whitespace-nowrap',
       accessor: (project: Project) => {
         return (
-          <div className="text-xs text-gray-600 space-y-0.5">
+          <div className="text-xs text-gray-600 space-y-0.5 whitespace-nowrap">
             <div className="flex items-center gap-1 text-[11px]">
               <span className="text-gray-400">Start:</span>
               <span>
@@ -452,11 +466,14 @@ export default function Projects() {
     {
       key: 'budget',
       header: 'BUDGET & QUOTED',
+      width: '140px',
+      className: 'whitespace-nowrap',
+      headerClassName: 'whitespace-nowrap',
       accessor: (project: Project) => {
         const quoted = Number(project.quoted_amount) || 0
         const budget = Number(project.budget) || 0
         return (
-          <div className="text-xs">
+          <div className="text-xs whitespace-nowrap">
             <p className="font-semibold text-gray-900">
               ${quoted.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
@@ -472,6 +489,9 @@ export default function Projects() {
     {
       key: 'actions',
       header: '',
+      width: '60px',
+      className: 'whitespace-nowrap text-right',
+      headerClassName: 'whitespace-nowrap',
       accessor: (project: Project) => {
         return (
           <div
@@ -758,7 +778,7 @@ export default function Projects() {
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <span
-                      className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+                      className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0"
                       style={{
                         backgroundColor: `${stageColor}15`,
                         color: stageColor,
@@ -767,7 +787,7 @@ export default function Projects() {
                     >
                       {stage?.name || '—'}
                     </span>
-                    <span className={`badge text-[11px] ${getStatusBadgeClass(project.status)}`}>
+                    <span className={`badge text-[11px] whitespace-nowrap shrink-0 ${getStatusBadgeClass(project.status)}`}>
                       {project.status || 'Not Started'}
                     </span>
                   </div>

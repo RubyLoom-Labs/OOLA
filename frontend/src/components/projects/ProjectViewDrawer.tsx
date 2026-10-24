@@ -18,13 +18,18 @@ import {
   AlertCircle,
   Tag,
   Layers,
-  CheckSquare,
   FileText,
   TrendingUp,
   Briefcase,
   Mail,
   Phone,
-  Plus,
+  Upload,
+  Eye,
+  Download,
+  FileSpreadsheet,
+  FileArchive,
+  FileImage,
+  UserPlus,
 } from 'lucide-react'
 import type {
   Project,
@@ -32,6 +37,7 @@ import type {
   ProjectStatusItem,
   ProjectPriorityItem,
   ProjectUser,
+  ProjectAttachment,
   UpdateProjectPayload,
 } from '@/apis/projectsApi'
 import { projectsApi } from '@/apis/projectsApi'
@@ -41,7 +47,9 @@ import CompanySelect from '@/components/companies/CompanySelect'
 import CompanyContactsMultiSelect from '@/components/companies/CompanyContactsMultiSelect'
 import ConfirmationModal from '@/components/common/ConfirmationModal'
 import UserSelect from '@/components/users/UserSelect'
-import TeamMembersAllocation from '@/components/projects/TeamMembersAllocation'
+import AddTeamMemberModal from '@/components/projects/AddTeamMemberModal'
+import UploadProjectDocumentModal from '@/components/projects/UploadProjectDocumentModal'
+import DocumentViewerModal, { downloadDocumentFile } from '@/components/projects/DocumentViewerModal'
 import { getUserRoleName } from '@/apis/usersApi'
 import { capitalizeWords } from '@/lib/utils'
 
@@ -54,7 +62,7 @@ interface ProjectViewDrawerProps {
   onDelete: (projectId: number) => void
 }
 
-type TabType = 'overview' | 'financials' | 'team' | 'tasks' | 'payments'
+type TabType = 'overview' | 'financials' | 'team' | 'documents' | 'payments'
 
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Urgent']
 
@@ -110,10 +118,24 @@ export default function ProjectViewDrawer({
   const [cost, setCost] = useState<string>('')
   const [revenue, setRevenue] = useState<string>('')
   const [profit, setProfit] = useState<string>('')
-  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([])
-  const [selectedUsers, setSelectedUsers] = useState<ProjectUser[]>([])
   const [selectedContactIds, setSelectedContactIds] = useState<number[]>([])
   const [selectedContacts, setSelectedContacts] = useState<CompanyContact[]>([])
+
+  // Documents tab states
+  const [documents, setDocuments] = useState<ProjectAttachment[]>([])
+  const [documentsLoading, setDocumentsLoading] = useState(false)
+  // Document states
+  const [showAddDocModal, setShowAddDocModal] = useState(false)
+  const [deleteDocTarget, setDeleteDocTarget] = useState<ProjectAttachment | null>(null)
+  const [viewingDoc, setViewingDoc] = useState<ProjectAttachment | null>(null)
+
+  // Team Members tab states
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false)
+  const [teamUserIds, setTeamUserIds] = useState<number[]>([])
+  const [teamUsers, setTeamUsers] = useState<ProjectUser[]>([])
+  const [teamSaving, setTeamSaving] = useState(false)
+  const [teamSuccessMsg, setTeamSuccessMsg] = useState<string | null>(null)
+  const [memberToRemove, setMemberToRemove] = useState<ProjectUser | null>(null)
 
   // Populate form state from project
   const populateForm = (p: Project) => {
@@ -145,15 +167,22 @@ export default function ProjectViewDrawer({
     setCost(p.cost !== null && p.cost !== undefined ? String(p.cost) : '')
     setRevenue(p.revenue !== null && p.revenue !== undefined ? String(p.revenue) : '')
     setProfit(p.profit !== null && p.profit !== undefined ? String(p.profit) : '')
-    setSelectedUserIds(Array.isArray(p.users) ? p.users.map((u) => u.id) : [])
-    setSelectedUsers(Array.isArray(p.users) ? p.users : [])
     setSelectedContactIds(
       (p as any).contact_ids || (Array.isArray((p as any).contacts) ? (p as any).contacts.map((c: any) => c.id) : [])
     )
     setSelectedContacts((p as any).contacts || [])
+
+    // Synchronize team members
+    setTeamUserIds(Array.isArray(p.users) ? p.users.map((u) => u.id) : [])
+    setTeamUsers(Array.isArray(p.users) ? p.users : [])
+
+    // Synchronize documents if preloaded
+    if (Array.isArray(p.attachments)) {
+      setDocuments(p.attachments)
+    }
   }
 
-  // Load project details and metadata on drawer open
+  // Load project details, metadata and documents on drawer open
   useEffect(() => {
     if (project && isOpen) {
       setIsEditing(initialEditMode)
@@ -161,11 +190,15 @@ export default function ProjectViewDrawer({
       populateForm(project)
       fetchFullProjectDetails(project.id)
       fetchMetadata()
+      fetchProjectDocuments(project.id)
     } else if (!isOpen) {
       setIsEditing(false)
       setShowMoreMenu(false)
       setShowDeleteConfirm(false)
       setValidationError(null)
+      setShowAddMemberModal(false)
+      setShowAddDocModal(false)
+      setTeamSuccessMsg(null)
     }
   }, [project?.id, isOpen, initialEditMode])
 
@@ -206,11 +239,25 @@ export default function ProjectViewDrawer({
     }
   }
 
+  const fetchProjectDocuments = async (id: number | string) => {
+    setDocumentsLoading(true)
+    try {
+      const res = await projectsApi.getAttachments(id)
+      if (res && res.data) {
+        setDocuments(res.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch project documents:', err)
+    } finally {
+      setDocumentsLoading(false)
+    }
+  }
+
   const handleStartEdit = () => {
     if (localProject) {
       populateForm(localProject)
     }
-    if (activeTab === 'tasks' || activeTab === 'payments') {
+    if (activeTab === 'documents' || activeTab === 'payments') {
       setActiveTab('overview')
     }
     setValidationError(null)
@@ -238,6 +285,7 @@ export default function ProjectViewDrawer({
     setSaveLoading(true)
 
     try {
+      // NOTE: user_ids is intentionally excluded here as members are managed only in the Team Members tab
       const payload: UpdateProjectPayload = {
         project_title: projectTitle.trim(),
         customer_id: customerId,
@@ -256,7 +304,6 @@ export default function ProjectViewDrawer({
         cost: cost !== '' ? Number(cost) : undefined,
         revenue: revenue !== '' ? Number(revenue) : undefined,
         profit: profit !== '' ? Number(profit) : undefined,
-        user_ids: selectedUserIds,
         contact_ids: selectedContactIds,
       }
 
@@ -277,6 +324,110 @@ export default function ProjectViewDrawer({
     } finally {
       setSaveLoading(false)
     }
+  }
+
+  // Save Team Members (dedicated to Team Members sub-tab only)
+  const handleSaveTeamMembers = async (newIds?: number[], newUsersList?: ProjectUser[]) => {
+    if (!localProject) return
+    const idsToSave = newIds !== undefined ? newIds : teamUserIds
+    const usersToSave = newUsersList !== undefined ? newUsersList : teamUsers
+
+    setTeamSaving(true)
+    setTeamSuccessMsg(null)
+
+    try {
+      const res = await projectsApi.updateProject(localProject.id, {
+        user_ids: idsToSave,
+      })
+      if (res && res.data) {
+        setLocalProject(res.data)
+        const updatedUsers = Array.isArray(res.data.users) ? res.data.users : usersToSave
+        setTeamUserIds(updatedUsers.map((u) => u.id))
+        setTeamUsers(updatedUsers)
+        if (onSave) onSave(res.data)
+        setShowAddMemberModal(false)
+        setTeamSuccessMsg('Team members updated successfully')
+        setTimeout(() => setTeamSuccessMsg(null), 3500)
+      }
+    } catch (err: any) {
+      console.error('Failed to save team members:', err)
+      alert(err?.response?.data?.message || err?.message || 'Failed to update team members.')
+      throw err
+    } finally {
+      setTeamSaving(false)
+    }
+  }
+
+  // Add new members via popup modal
+  const handleAddMembers = async (
+    newlySelectedUserIds: number[],
+    newlySelectedUsers: ProjectUser[]
+  ) => {
+    if (!localProject) return
+    const combinedIds = Array.from(new Set([...teamUserIds, ...newlySelectedUserIds]))
+    const existingMap = new Map<number, ProjectUser>()
+    teamUsers.forEach((u) => existingMap.set(u.id, u))
+    newlySelectedUsers.forEach((u) => existingMap.set(u.id, u))
+    const combinedUsers = Array.from(existingMap.values())
+
+    await handleSaveTeamMembers(combinedIds, combinedUsers)
+  }
+
+  // Remove a single member directly
+  const handleRemoveMember = async (userId: number) => {
+    if (!localProject) return
+    const updatedIds = teamUserIds.filter((id) => id !== userId)
+    const updatedUsers = teamUsers.filter((u) => u.id !== userId)
+    setTeamUserIds(updatedIds)
+    setTeamUsers(updatedUsers)
+    await handleSaveTeamMembers(updatedIds, updatedUsers)
+  }
+
+  // Document management handlers
+  const handleDocumentUploaded = (newDoc: ProjectAttachment) => {
+    setDocuments((prev) => [newDoc, ...prev])
+  }
+
+  const handleDeleteDocument = async (docId: number) => {
+    if (!localProject) return
+    try {
+      await projectsApi.deleteAttachment(localProject.id, docId)
+      setDocuments((prev) => prev.filter((d) => d.id !== docId))
+      setDeleteDocTarget(null)
+    } catch (err: any) {
+      console.error('Failed to delete document:', err)
+      alert(err?.response?.data?.message || err?.message || 'Failed to delete document.')
+    }
+  }
+
+  const formatFileSize = (bytes?: number | null) => {
+    if (!bytes || bytes <= 0) return '—'
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const getDocIcon = (fileName?: string, mimeType?: string) => {
+    const ext = (fileName || '').split('.').pop()?.toLowerCase() || ''
+    if (ext === 'pdf' || (mimeType && mimeType.includes('pdf'))) {
+      return <FileText size={18} className="text-rose-500" />
+    }
+    if (['xls', 'xlsx', 'csv'].includes(ext) || (mimeType && mimeType.includes('sheet'))) {
+      return <FileSpreadsheet size={18} className="text-emerald-500" />
+    }
+    if (['doc', 'docx'].includes(ext) || (mimeType && mimeType.includes('word'))) {
+      return <FileText size={18} className="text-blue-500" />
+    }
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+      return <FileArchive size={18} className="text-amber-500" />
+    }
+    if (
+      ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext) ||
+      (mimeType && mimeType.includes('image'))
+    ) {
+      return <FileImage size={18} className="text-purple-500" />
+    }
+    return <FileText size={18} className="text-slate-500" />
   }
 
 
@@ -330,10 +481,10 @@ export default function ProjectViewDrawer({
       <SlideDrawer
         isOpen={isOpen}
         onClose={onClose}
-        width="640px"
+        width="720px"
         title=""
         subtitle=""
-        className="contact-view-drawer"
+        className="contact-view-drawer project-view-drawer"
         hideHeader
       >
         <div className="cvd-panel">
@@ -531,13 +682,13 @@ export default function ProjectViewDrawer({
                   className={`cvd-tab${activeTab === 'team' ? ' cvd-tab-active' : ''}`}
                   onClick={() => setActiveTab('team')}
                 >
-                  Team Members ({localProject.users?.length || 0})
+                  Team Members ({teamUsers.length || localProject.users?.length || 0})
                 </button>
                 <button
-                  className={`cvd-tab${activeTab === 'tasks' ? ' cvd-tab-active' : ''}`}
-                  onClick={() => setActiveTab('tasks')}
+                  className={`cvd-tab${activeTab === 'documents' ? ' cvd-tab-active' : ''}`}
+                  onClick={() => setActiveTab('documents')}
                 >
-                  Tasks ({localProject.tasks_count ?? 0})
+                  Project Documents ({documents.length})
                 </button>
                 <button
                   className={`cvd-tab${activeTab === 'payments' ? ' cvd-tab-active' : ''}`}
@@ -695,6 +846,8 @@ export default function ProjectViewDrawer({
                                 setSelectedManager(u)
                               }}
                               placeholder="Select Project Manager..."
+                              isEmployee={true}
+                              status="Active"
                             />
                           </div>
                           <div className="form-group min-w-0">
@@ -708,6 +861,8 @@ export default function ProjectViewDrawer({
                                 setSelectedLead(u)
                               }}
                               placeholder="Select Associated Lead..."
+                              isEmployee={true}
+                              status="Active"
                             />
                           </div>
                         </div>
@@ -767,13 +922,13 @@ export default function ProjectViewDrawer({
                         <div className="grid grid-cols-3 gap-2.5">
                           <div className="form-group min-w-0">
                             <label className="form-label text-xs">Allocated Budget</label>
-                            <div className="relative">
-                              <span className="absolute left-2.5 top-2 text-xs text-slate-400 font-semibold">$</span>
+                            <div className="input-with-prefix">
+                              <span className="input-prefix">$</span>
                               <input
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                className="form-input form-input-sm pl-6"
+                                className="form-input form-input-sm"
                                 placeholder="0.00"
                                 value={budget}
                                 onChange={(e) => setBudget(e.target.value)}
@@ -782,13 +937,13 @@ export default function ProjectViewDrawer({
                           </div>
                           <div className="form-group min-w-0">
                             <label className="form-label text-xs">Quoted Price</label>
-                            <div className="relative">
-                              <span className="absolute left-2.5 top-2 text-xs text-slate-400 font-semibold">$</span>
+                            <div className="input-with-prefix">
+                              <span className="input-prefix">$</span>
                               <input
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                className="form-input form-input-sm pl-6"
+                                className="form-input form-input-sm"
                                 placeholder="0.00"
                                 value={quotedAmount}
                                 onChange={(e) => setQuotedAmount(e.target.value)}
@@ -797,13 +952,13 @@ export default function ProjectViewDrawer({
                           </div>
                           <div className="form-group min-w-0">
                             <label className="form-label text-xs">Total Cost</label>
-                            <div className="relative">
-                              <span className="absolute left-2.5 top-2 text-xs text-slate-400 font-semibold">$</span>
+                            <div className="input-with-prefix">
+                              <span className="input-prefix">$</span>
                               <input
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                className="form-input form-input-sm pl-6"
+                                className="form-input form-input-sm"
                                 placeholder="0.00"
                                 value={cost}
                                 onChange={(e) => setCost(e.target.value)}
@@ -815,13 +970,13 @@ export default function ProjectViewDrawer({
                         <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
                           <div className="form-group min-w-0">
                             <label className="form-label text-xs">Realized Revenue</label>
-                            <div className="relative">
-                              <span className="absolute left-2.5 top-2 text-xs text-slate-400 font-semibold">$</span>
+                            <div className="input-with-prefix">
+                              <span className="input-prefix">$</span>
                               <input
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                className="form-input form-input-sm pl-6"
+                                className="form-input form-input-sm"
                                 placeholder="0.00"
                                 value={revenue}
                                 onChange={(e) => setRevenue(e.target.value)}
@@ -830,12 +985,12 @@ export default function ProjectViewDrawer({
                           </div>
                           <div className="form-group min-w-0">
                             <label className="form-label text-xs">Net Profit</label>
-                            <div className="relative">
-                              <span className="absolute left-2.5 top-2 text-xs text-slate-400 font-semibold">$</span>
+                            <div className="input-with-prefix">
+                              <span className="input-prefix">$</span>
                               <input
                                 type="number"
                                 step="0.01"
-                                className="form-input form-input-sm pl-6"
+                                className="form-input form-input-sm"
                                 placeholder="0.00"
                                 value={profit}
                                 onChange={(e) => setProfit(e.target.value)}
@@ -846,30 +1001,7 @@ export default function ProjectViewDrawer({
                       </div>
                     </div>
 
-                    {/* Card 5: Team Members Allocation */}
-                    <div className="cvd-card">
-                      <div className="cvd-card-header">
-                        <span className="cvd-card-title flex items-center gap-1.5">
-                          <Users size={14} className="text-blue-600" />
-                          <span>Team Members Allocation</span>
-                        </span>
-                        <span className="text-xs text-slate-400 font-medium">
-                          {selectedUserIds.length} allocated
-                        </span>
-                      </div>
-                      <div className="pt-2">
-                        <TeamMembersAllocation
-                          selectedUserIds={selectedUserIds}
-                          initialUsers={selectedUsers}
-                          onChange={(ids, userObjs) => {
-                            setSelectedUserIds(ids)
-                            setSelectedUsers(userObjs)
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Card 6: Project Scope & Notes */}
+                    {/* Card 5: Project Scope & Notes */}
                     <div className="cvd-card">
                       <div className="cvd-card-header">
                         <span className="cvd-card-title flex items-center gap-1.5">
@@ -900,13 +1032,6 @@ export default function ProjectViewDrawer({
                           <FolderKanban size={14} className="text-primary-600" />
                           Project Specifications
                         </span>
-                        <button
-                          className="cvd-section-edit-btn"
-                          onClick={handleStartEdit}
-                          title="Edit Specs"
-                        >
-                          <Edit2 size={12} />
-                        </button>
                       </div>
 
                       <div className="cvd-info-list">
@@ -1304,17 +1429,57 @@ export default function ProjectViewDrawer({
                   </div>
                 )}
 
-            {/* ──────── TEAM TAB (READ-ONLY) ──────── */}
+            {/* ──────── TEAM TAB ──────── */}
             {activeTab === 'team' && (
               <div className="cvd-tab-pane space-y-4">
+                {/* Header card with Assign action */}
+                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-xs flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                      <Users size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900">
+                        Team Members ({teamUsers.length})
+                      </h4>
+                      <p className="text-xs text-gray-500">
+                        Assigned engineers, developers, and project personnel
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm flex items-center gap-1.5 shadow-2xs"
+                    onClick={() => setShowAddMemberModal(true)}
+                    disabled={teamSaving}
+                  >
+                    {teamSaving ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <UserPlus size={13} />
+                    )}
+                    <span>Add Member</span>
+                  </button>
+                </div>
+
+                {/* Success feedback */}
+                {teamSuccessMsg && (
+                  <div className="p-3 bg-emerald-50 text-emerald-700 text-xs rounded-xl border border-emerald-200 flex items-center gap-2 animate-fade-in">
+                    <CheckCircle size={14} className="text-emerald-600 shrink-0" />
+                    <span>{teamSuccessMsg}</span>
+                  </div>
+                )}
+
+                {/* Team Members List */}
                 <div className="space-y-3">
-                  {localProject.users && localProject.users.length > 0 ? (
+                  {teamUsers.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {localProject.users.map((u) => (
+                      {teamUsers.map((u) => (
                         <div
                           key={u.id}
-                            className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-xs"
-                          >
+                          className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-xs hover:border-gray-200 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
                             <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 font-bold flex items-center justify-center text-xs shrink-0">
                               {u.name
                                 .split(' ')
@@ -1337,56 +1502,197 @@ export default function ProjectViewDrawer({
                               )}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                        <Users size={28} className="mx-auto text-gray-300 mb-2" />
-                        <p className="text-xs font-medium text-gray-600">
-                          No team members assigned yet
-                        </p>
-                        <button
-                          className="btn btn-outline btn-xs mt-3"
-                          onClick={handleStartEdit}
-                        >
-                          <Plus size={12} /> Assign Members
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                          <button
+                            type="button"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors shrink-0 ml-2"
+                            title={`Remove ${u.name} from project`}
+                            onClick={() => setMemberToRemove(u)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                      <Users size={28} className="mx-auto text-gray-300 mb-2" />
+                      <p className="text-xs font-medium text-gray-600">
+                        No team members assigned yet
+                      </p>
+                      <p className="text-[11px] text-gray-400 mt-0.5 max-w-xs mx-auto">
+                        Add staff and team contributors to allocate tasks and track contributions.
+                      </p>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-xs mt-3 flex items-center gap-1.5 mx-auto shadow-2xs"
+                        onClick={() => setShowAddMemberModal(true)}
+                      >
+                        <UserPlus size={12} /> Add Member
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* ──────── TASKS TAB ──────── */}
-            {activeTab === 'tasks' && (
+            {/* ──────── DOCUMENTS TAB (Replaces Tasks Tab) ──────── */}
+            {activeTab === 'documents' && (
               <div className="cvd-tab-pane space-y-4">
+                {/* Header card with Upload action */}
                 <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-xs flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                      <CheckSquare size={20} />
+                      <FolderKanban size={20} />
                     </div>
                     <div>
                       <h4 className="text-sm font-semibold text-gray-900">
-                        Associated Tasks ({localProject.tasks_count ?? 0})
+                        Project Documents ({documents.length})
                       </h4>
                       <p className="text-xs text-gray-500">
-                        Track progress, milestones, and deliverables
+                        Technical specifications, contracts, and relevant files
                       </p>
                     </div>
                   </div>
-                  <span className="badge badge-primary font-mono text-xs">
-                    {localProject.tasks_count ?? 0} Total
-                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm flex items-center gap-1.5 shadow-2xs"
+                    onClick={() => setShowAddDocModal(true)}
+                  >
+                    <Upload size={13} />
+                    <span>Add Document</span>
+                  </button>
                 </div>
 
-                <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                  <Clock size={24} className="mx-auto text-gray-300 mb-2" />
-                  <p className="text-xs text-gray-500">
-                    {localProject.tasks_count
-                      ? `${localProject.tasks_count} tasks are tracked for ${localProject.project_code}`
-                      : 'No tasks have been assigned to this project yet.'}
-                  </p>
-                </div>
+                {/* Documents List */}
+                {documentsLoading ? (
+                  <div className="py-8 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+                    <Loader2 size={16} className="animate-spin text-primary-500" />
+                    <span>Loading project documents...</span>
+                  </div>
+                ) : documents.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {documents.map((doc) => {
+                      const docTitle =
+                        doc.document_name || doc.document_title || doc.file_name || 'Project Document'
+                      const docType = doc.type || doc.category
+
+                      return (
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between p-3.5 bg-white rounded-xl border border-gray-100 shadow-xs hover:border-gray-200 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                              onClick={() => setViewingDoc(doc)}
+                              title="Click to view document"
+                            >
+                              {getDocIcon(docTitle, doc.mime_type || undefined)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                <h4
+                                  className="text-xs font-semibold text-gray-900 truncate hover:text-blue-600 cursor-pointer transition-colors"
+                                  title={`Click to view: ${docTitle}`}
+                                  onClick={() => setViewingDoc(doc)}
+                                >
+                                  {docTitle}
+                                </h4>
+                                {docType && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/80 shrink-0">
+                                    {docType}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-[11px] text-gray-400 mt-0.5 flex-wrap">
+                                {doc.file_size ? (
+                                  <span>{formatFileSize(doc.file_size)}</span>
+                                ) : null}
+                                {doc.created_at && (
+                                  <>
+                                    <span>•</span>
+                                    <span>
+                                      {new Date(doc.created_at).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                      })}
+                                    </span>
+                                  </>
+                                )}
+                                {doc.uploader?.name && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-gray-500">
+                                      By {capitalizeWords(doc.uploader.name)}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                          {doc.file_path && (
+                            <button
+                              type="button"
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="View Document"
+                              onClick={() => setViewingDoc(doc)}
+                            >
+                              <Eye size={14} />
+                            </button>
+                          )}
+                          {doc.file_path && (
+                            <button
+                              type="button"
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="Download Document"
+                              onClick={() =>
+                                downloadDocumentFile(
+                                  doc.file_path,
+                                  doc.document_name ||
+                                    doc.document_title ||
+                                    doc.file_name ||
+                                    'document'
+                                )
+                              }
+                            >
+                              <Download size={14} />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="Delete Document"
+                            onClick={() => setDeleteDocTarget(doc)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  </div>
+                ) : (
+                  <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                    <FolderKanban size={32} className="mx-auto text-gray-300 mb-2" />
+                    <p className="text-xs font-medium text-gray-600">
+                      No documents attached yet
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-0.5 max-w-xs mx-auto">
+                      Upload technical specifications, architectural designs, contracts, or reference links.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-xs mt-3 flex items-center gap-1.5 mx-auto shadow-2xs"
+                      onClick={() => setShowAddDocModal(true)}
+                    >
+                      <Upload size={12} />
+                      <span>Upload First Document</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1438,6 +1744,70 @@ export default function ProjectViewDrawer({
         message={`Are you sure you want to delete "${localProject.project_title}" (${localProject.project_code})? This action cannot be undone.`}
         confirmText="Delete Project"
         variant="danger"
+      />
+
+      {/* Delete document confirmation modal */}
+      <ConfirmationModal
+        isOpen={Boolean(deleteDocTarget)}
+        onClose={() => setDeleteDocTarget(null)}
+        onConfirm={() => {
+          if (deleteDocTarget) {
+            handleDeleteDocument(deleteDocTarget.id)
+          }
+        }}
+        title="Delete Project Document"
+        message={`Are you sure you want to delete "${
+          deleteDocTarget?.document_name ||
+          deleteDocTarget?.document_title ||
+          deleteDocTarget?.file_name ||
+          'this document'
+        }"? This file will be removed from this project.`}
+        confirmText="Delete Document"
+        variant="danger"
+      />
+
+      {/* Remove member confirmation modal */}
+      <ConfirmationModal
+        isOpen={Boolean(memberToRemove)}
+        onClose={() => setMemberToRemove(null)}
+        onConfirm={() => {
+          if (memberToRemove) {
+            handleRemoveMember(memberToRemove.id)
+            setMemberToRemove(null)
+          }
+        }}
+        title="Remove Team Member"
+        message={`Are you sure you want to remove "${memberToRemove?.name}" from this project's assigned team?`}
+        confirmText="Remove Member"
+        variant="danger"
+      />
+
+      {/* Add team member modal popup */}
+      <AddTeamMemberModal
+        isOpen={showAddMemberModal}
+        onClose={() => setShowAddMemberModal(false)}
+        existingUserIds={teamUserIds}
+        existingUsers={teamUsers}
+        projectTitle={localProject.project_title}
+        projectCode={localProject.project_code}
+        onSave={handleAddMembers}
+      />
+
+      {/* Upload project document modal popup */}
+      <UploadProjectDocumentModal
+        isOpen={showAddDocModal}
+        onClose={() => setShowAddDocModal(false)}
+        projectId={localProject.id}
+        projectTitle={localProject.project_title}
+        projectCode={localProject.project_code}
+        onSuccess={handleDocumentUploaded}
+      />
+
+      {/* Document Viewer Modal Popup */}
+      <DocumentViewerModal
+        isOpen={Boolean(viewingDoc)}
+        onClose={() => setViewingDoc(null)}
+        document={viewingDoc}
       />
     </>
   )
