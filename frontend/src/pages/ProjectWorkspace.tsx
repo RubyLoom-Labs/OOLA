@@ -67,236 +67,74 @@ export interface KanbanTask {
   completedAt?: string
 }
 
-const INITIAL_TASKS: KanbanTask[] = [
-  // To Do
-  {
-    id: 'task-1',
-    title: 'Prepare project proposal',
-    description: 'Draft the initial project scope, milestone timelines, and deliverable commitments.',
-    priority: 'High',
-    taskType: 'General',
-    stage: 'to-do',
-    assignee: {
-      name: 'Sarah Johnson',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
-      role: 'Project Lead',
-    },
-    dueDate: 'Sep 28, 2026',
-    subtasksCount: 2,
-  },
-  {
-    id: 'task-2',
-    title: 'Collect client requirements',
-    description: 'Schedule discovery sessions with core stakeholder team and document technical specifications.',
-    priority: 'Medium',
-    taskType: 'Task',
-    stage: 'to-do',
-    assignee: {
-      name: 'Michael Chen',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-      role: 'Business Analyst',
-    },
-    dueDate: 'Sep 29, 2026',
-    subtasksCount: 1,
-  },
-  {
-    id: 'task-3',
-    title: 'Design homepage mockup',
-    description: 'Create high-fidelity wireframes and interactive prototypes in Figma for desktop and mobile.',
-    priority: 'Medium',
-    taskType: 'Feature',
-    stage: 'to-do',
-    assignee: {
-      name: 'Emily Rodriguez',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-      role: 'UI/UX Designer',
-    },
-    dueDate: 'Oct 01, 2026',
-    subtasksCount: 1,
-  },
-  {
-    id: 'task-4',
-    title: 'Setup development environment',
-    description: 'Configure Docker containers, CI/CD pipeline triggers, and cloud staging environments.',
-    priority: 'Low',
-    taskType: 'General',
-    stage: 'to-do',
-    assignee: {
-      name: 'David Kim',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-      role: 'DevOps Engineer',
-    },
-    dueDate: 'Oct 02, 2026',
-  },
+const mapApiTaskToKanbanTask = (t: any): KanbanTask => {
+  let stage: KanbanTask['stage'] = 'to-do'
+  const rawStage = String(t.stage || t.status || '').toLowerCase().replace(/[\s_]+/g, '-')
+  if (rawStage.includes('progress') || rawStage === 'in-progress' || rawStage === 'doing') {
+    stage = 'in-progress'
+  } else if (rawStage.includes('review') || rawStage.includes('testing') || rawStage.includes('qa')) {
+    stage = 'review'
+  } else if (rawStage.includes('complete') || rawStage.includes('done')) {
+    stage = 'completed'
+  } else {
+    stage = 'to-do'
+  }
 
-  // In Progress
-  {
-    id: 'task-5',
-    title: 'Develop authentication module',
-    description: 'Implement JWT session handling, multi-factor authentication, and password reset flows.',
-    priority: 'High',
-    taskType: 'Feature',
-    stage: 'in-progress',
-    assignee: {
-      name: 'John Doe',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-      role: 'Senior Backend Dev',
-    },
-    dueDate: 'Sep 30, 2026',
-    subtasksCount: 3,
-  },
-  {
-    id: 'task-6',
-    title: 'Integrate payment gateway',
-    description: 'Connect Stripe and PayPal webhooks with secure PCI-compliant transaction logging.',
-    priority: 'High',
-    taskType: 'Feature',
-    stage: 'in-progress',
-    assignee: {
-      name: 'Lisa Wang',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face',
-      role: 'Full Stack Dev',
-    },
-    dueDate: 'Oct 02, 2026',
-    subtasksCount: 1,
-  },
-  {
-    id: 'task-7',
-    title: 'Create API endpoints',
-    description: 'Define RESTful contracts for user entities, project status transitions, and team rosters.',
-    priority: 'Medium',
-    taskType: 'Feature',
-    stage: 'in-progress',
-    assignee: {
-      name: 'Robert Taylor',
-      avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop&crop=face',
-      role: 'Backend Architect',
-    },
-    dueDate: 'Oct 03, 2026',
-    subtasksCount: 2,
-  },
-  {
-    id: 'task-8',
-    title: 'Deploy to staging server',
-    description: 'Automate build artifacts packaging and run smoke integration test suite.',
-    priority: 'Medium',
-    taskType: 'Task',
-    stage: 'in-progress',
-    assignee: {
-      name: 'Kevin Perera',
-      avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&h=100&fit=crop&crop=face',
-      role: 'Cloud Engineer',
-    },
-    dueDate: 'Oct 03, 2026',
-  },
+  let priority: KanbanTask['priority'] = 'Medium'
+  const rawPriority = String(t.priority || '').toLowerCase()
+  if (rawPriority.includes('high') || rawPriority.includes('urgent')) {
+    priority = 'High'
+  } else if (rawPriority.includes('low')) {
+    priority = 'Low'
+  } else {
+    priority = 'Medium'
+  }
 
-  // Review
-  {
-    id: 'task-9',
-    title: 'UI/UX improvements',
-    description: 'Refine micro-interactions, responsive mobile margins, and accessibility contrast standards.',
-    priority: 'Medium',
-    taskType: 'Task',
-    stage: 'review',
-    assignee: {
-      name: 'Thomas Brown',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
-      role: 'Product Designer',
-    },
-    dueDate: 'Oct 05, 2026',
-    subtasksCount: 1,
-  },
-  {
-    id: 'task-10',
-    title: 'Test all features',
-    description: 'Execute end-to-end regression tests across Edge, Chrome, Safari, and mobile breakpoints.',
-    priority: 'High',
-    taskType: 'Bug',
-    stage: 'review',
-    assignee: {
-      name: 'Amanda Wilson',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop&crop=face',
-      role: 'QA Lead',
-    },
-    dueDate: 'Oct 06, 2026',
-  },
-  {
-    id: 'task-11',
-    title: 'Performance optimization',
-    description: 'Audit query execution times, implement Redis cache layer, and minify static assets.',
-    priority: 'Low',
-    taskType: 'Task',
-    stage: 'review',
-    assignee: {
-      name: 'Daniel Martinez',
-      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&h=100&fit=crop&crop=face',
-      role: 'Performance Eng',
-    },
-    dueDate: 'Oct 07, 2026',
-  },
+  const firstUser = Array.isArray(t.users) && t.users.length > 0 ? t.users[0] : (t.user || null)
+  const assigneeName =
+    firstUser?.name ||
+    t.assignee_name ||
+    (typeof t.assignee === 'string' ? t.assignee : t.assignee?.name) ||
+    'Unassigned'
+  const assigneeAvatar = firstUser?.avatar || (typeof t.assignee === 'object' ? t.assignee?.avatar : undefined)
+  const assigneeRole =
+    firstUser?.designation || (typeof t.assignee === 'object' ? t.assignee?.role : undefined) || 'Team Member'
 
-  // Completed
-  {
-    id: 'task-12',
-    title: 'Project setup and planning',
-    priority: 'Medium',
-    stage: 'completed',
+  let dueDate = 'No Due Date'
+  if (t.due_date) {
+    try {
+      const d = new Date(t.due_date)
+      if (!isNaN(d.getTime())) {
+        dueDate = d.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      } else {
+        dueDate = String(t.due_date)
+      }
+    } catch {
+      dueDate = String(t.due_date)
+    }
+  }
+
+  return {
+    id: String(t.id),
+    title: t.title || t.name || 'Untitled Task',
+    description: t.description || undefined,
+    priority,
+    taskType: (t.task_type as any) || 'General',
+    stage,
     assignee: {
-      name: 'Sarah Connor',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
+      name: assigneeName,
+      avatar: assigneeAvatar,
+      role: assigneeRole,
     },
-    dueDate: 'Sep 20, 2026',
-    completedAt: 'Sep 20, 2026',
-  },
-  {
-    id: 'task-13',
-    title: 'Database schema design',
-    priority: 'High',
-    stage: 'completed',
-    assignee: {
-      name: 'John Doe',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-    },
-    dueDate: 'Sep 21, 2026',
-    completedAt: 'Sep 21, 2026',
-  },
-  {
-    id: 'task-14',
-    title: 'Initial development setup',
-    priority: 'Medium',
-    stage: 'completed',
-    assignee: {
-      name: 'David Kim',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-    },
-    dueDate: 'Sep 22, 2026',
-    completedAt: 'Sep 22, 2026',
-  },
-  {
-    id: 'task-15',
-    title: 'User roles and permissions',
-    priority: 'High',
-    stage: 'completed',
-    assignee: {
-      name: 'Robert Taylor',
-      avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop&crop=face',
-    },
-    dueDate: 'Sep 23, 2026',
-    completedAt: 'Sep 23, 2026',
-  },
-  {
-    id: 'task-16',
-    title: 'Basic CRM modules',
-    priority: 'Medium',
-    stage: 'completed',
-    assignee: {
-      name: 'Lisa Wang',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face',
-    },
-    dueDate: 'Sep 24, 2026',
-    completedAt: 'Sep 24, 2026',
-  },
-]
+    dueDate,
+    subtasksCount: t.subtasks_count || (Array.isArray(t.subtasks) ? t.subtasks.length : 0),
+    completedAt: t.completed_at || (stage === 'completed' ? dueDate : undefined),
+  }
+}
 
 const STAGES: { id: KanbanTask['stage']; name: string }[] = [
   { id: 'to-do', name: 'To Do' },
@@ -363,18 +201,29 @@ export default function ProjectWorkspace() {
   // Project Actions dropdown
   const [showActionsDropdown, setShowActionsDropdown] = useState(false)
 
-  // Task list state
+  // Task list state - starts empty and loads real tasks from API
   const [tasks, setTasks] = useState<KanbanTask[]>(() => {
+    if (!id) return []
     const saved = localStorage.getItem(`project_tasks_${id}`)
     if (saved) {
       try {
-        return JSON.parse(saved)
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed)) {
+          // If the cache contains any legacy mock tasks ('task-1' through 'task-16'), wipe cache completely
+          const hasLegacyMock = parsed.some((t: any) => /^task-(?:[1-9]|1[0-6])$/.test(String(t.id)))
+          if (hasLegacyMock) {
+            localStorage.removeItem(`project_tasks_${id}`)
+            return []
+          }
+          return parsed
+        }
       } catch (e) {
         // Fallback
       }
     }
-    return INITIAL_TASKS
+    return []
   })
+  const [tasksLoading, setTasksLoading] = useState(false)
 
   // Drag and Drop state
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
@@ -388,7 +237,7 @@ export default function ProjectWorkspace() {
   const [newTaskPriority, setNewTaskPriority] = useState<'High' | 'Medium' | 'Low'>('High')
   const [newTaskType, setNewTaskType] = useState<'General' | 'Bug' | 'Feature' | 'Task'>('General')
   const [newTaskAssignee, setNewTaskAssignee] = useState('')
-  const [newTaskDueDate, setNewTaskDueDate] = useState('10/18/2026')
+  const [newTaskDueDate, setNewTaskDueDate] = useState(() => new Date().toISOString().split('T')[0])
   const [newTaskReminder, setNewTaskReminder] = useState('1 Hour Before')
   const [newTaskStage, setNewTaskStage] = useState<KanbanTask['stage']>('to-do')
   const [showAddMemberModal, setShowAddMemberModal] = useState(false)
@@ -414,6 +263,67 @@ export default function ProjectWorkspace() {
     }
   }, [tasks, id])
 
+  // Fetch real tasks from backend API
+  const fetchTasks = async (projectId: string | number) => {
+    setTasksLoading(true)
+    // 1. Try project-specific endpoint /projects/{id}/tasks
+    try {
+      const res = await projectsApi.getProjectTasks(projectId)
+      const taskList = (res as any)?.data?.data || (res as any)?.data || res
+      if (Array.isArray(taskList)) {
+        const mapped = taskList.map(mapApiTaskToKanbanTask)
+        setTasks(mapped)
+        if (id) {
+          localStorage.setItem(`project_tasks_${id}`, JSON.stringify(mapped))
+        }
+        return
+      }
+    } catch (err) {
+      console.warn('projectsApi.getProjectTasks failed, trying tasksApi:', err)
+    }
+
+    // 2. Try generic tasksApi with taskable filters
+    try {
+      const res = await tasksApi.getTasks({
+        taskable_type: 'project',
+        taskable_id: projectId,
+        per_page: 100,
+      })
+      const taskList = (res as any)?.data?.data || (res as any)?.data || res
+      if (Array.isArray(taskList)) {
+        const mapped = taskList.map(mapApiTaskToKanbanTask)
+        setTasks(mapped)
+        if (id) {
+          localStorage.setItem(`project_tasks_${id}`, JSON.stringify(mapped))
+        }
+        return
+      }
+    } catch (err) {
+      console.warn('tasksApi.getTasks taskable query failed, trying fallback:', err)
+    }
+
+    // 3. Fallback query
+    try {
+      const res = await tasksApi.getTasks({
+        taskable_id: projectId,
+        per_page: 100,
+      } as any)
+      const taskList = (res as any)?.data?.data || (res as any)?.data || res
+      if (Array.isArray(taskList)) {
+        const mapped = taskList.map(mapApiTaskToKanbanTask)
+        setTasks(mapped)
+        if (id) {
+          localStorage.setItem(`project_tasks_${id}`, JSON.stringify(mapped))
+        }
+        return
+      }
+    } catch (err) {
+      console.warn('tasksApi.getTasks fallback failed:', err)
+    } finally {
+      setTasksLoading(false)
+    }
+  }
+
   // Fetch project details
   const fetchProjectData = async () => {
     if (!id) return
@@ -421,47 +331,18 @@ export default function ProjectWorkspace() {
       const res = await projectsApi.getProject(id)
       const projectData = (res as any)?.data?.data || (res as any)?.data || res
       setProject(projectData)
+
+      // If backend project endpoint returns tasks relation, use it
+      if (Array.isArray(projectData?.tasks) && projectData.tasks.length > 0) {
+        const mapped = projectData.tasks.map(mapApiTaskToKanbanTask)
+        setTasks(mapped)
+        localStorage.setItem(`project_tasks_${id}`, JSON.stringify(mapped))
+      } else {
+        await fetchTasks(id)
+      }
     } catch (err: any) {
-      console.warn('API getProject failed, using fallback mock data:', err)
-      // Provide robust fallback data matching the screenshot
-      setProject({
-        id: Number(id) || 1,
-        project_code: 'PRJ-2026-001',
-        project_title: 'Website Development',
-        description: 'Develop a modern and scalable website for TechSolutions Inc. with advanced features.',
-        customer_id: 1,
-        customer: {
-          id: 1,
-          company_name: 'TechSolutions Inc.',
-          customer_code: 'CUS-001',
-        },
-        manager: {
-          id: 1,
-          name: 'Michael Chen',
-          email: 'michael.chen@ooralabz.com',
-          status: 'Active',
-          role: 'Project Manager',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        },
-        stage: {
-          id: 2,
-          name: 'In Progress',
-          color: '#10b981',
-        },
-        project_type: 'Web Development',
-        priority: 'High',
-        status: 'In Progress',
-        start_date: '2026-09-01',
-        expected_end_date: '2026-12-31',
-        budget: 1200000,
-        quoted_amount: 1200000,
-        cost: 600000,
-        revenue: 600000,
-        tasks_count: 12,
-        payments_count: 4,
-      })
-    } finally {
-      // Done fetching
+      console.warn('API getProject failed, attempting to load tasks independently:', err)
+      await fetchTasks(id)
     }
   }
 
@@ -770,24 +651,24 @@ export default function ProjectWorkspace() {
 
   // Active Display Project with robust fallback
   const displayProject: any = project || {
-    id: 1,
-    project_code: 'PRJ-2026-001',
-    project_title: 'Website Development',
-    description: 'Develop a modern and scalable website for TechSolutions Inc. with advanced features.',
-    customer_id: 1,
-    customer: { id: 1, company_name: 'TechSolutions Inc.' },
+    id: id ? (isNaN(Number(id)) ? id : Number(id)) : '',
+    project_code: '',
+    project_title: 'Project Workspace',
+    description: '',
+    customer_id: null,
+    customer: null,
     manager: null,
     users: [],
     stage: { name: 'In Progress', color: '#10b981' },
-    project_type: 'Web Development',
-    priority: 'High',
+    project_type: '',
+    priority: 'Medium',
     status: 'In Progress',
-    start_date: '2026-09-01',
-    expected_end_date: '2026-12-31',
-    budget: 1200000,
-    quoted_amount: 1200000,
-    cost: 600000,
-    revenue: 600000,
+    start_date: '',
+    expected_end_date: '',
+    budget: 0,
+    quoted_amount: 0,
+    cost: 0,
+    revenue: 0,
   }
 
   // Project assigned users (manager + team members, deduplicated)
@@ -1152,7 +1033,7 @@ export default function ProjectWorkspace() {
                   day: 'numeric',
                   year: 'numeric',
                 })
-              : 'Dec 31, 2026'
+              : 'Not set'
           }
           icon={<Calendar size={20} />}
           variant="purple"
@@ -1346,9 +1227,9 @@ export default function ProjectWorkspace() {
                       <Building2 size={13} className="text-primary-600 shrink-0" />
                       <span
                         className="truncate text-right"
-                        title={displayProject.customer?.company_name || 'TechSolutions Inc.'}
+                        title={displayProject.customer?.company_name || 'No Client'}
                       >
-                        {displayProject.customer?.company_name || 'TechSolutions Inc.'}
+                        {displayProject.customer?.company_name || 'No Client'}
                       </span>
                     </div>
                   </div>
@@ -1358,9 +1239,9 @@ export default function ProjectWorkspace() {
                     <span className="text-gray-500 font-medium shrink-0">Project Type</span>
                     <span
                       className="font-semibold text-gray-800 truncate text-right flex-1 min-w-0"
-                      title={displayProject.project_type || 'Web Development'}
+                      title={displayProject.project_type || 'General'}
                     >
-                      {displayProject.project_type || 'Web Development'}
+                      {displayProject.project_type || 'General'}
                     </span>
                   </div>
 
@@ -1384,7 +1265,7 @@ export default function ProjectWorkspace() {
                               day: 'numeric',
                               year: 'numeric',
                             })
-                          : 'Sep 01, 2026'}
+                          : 'Not set'}
                       </span>
                     </div>
                   </div>
@@ -1401,7 +1282,7 @@ export default function ProjectWorkspace() {
                               day: 'numeric',
                               year: 'numeric',
                             })
-                          : 'Dec 31, 2026'}
+                          : 'Not set'}
                       </span>
                     </div>
                   </div>
@@ -1700,11 +1581,16 @@ export default function ProjectWorkspace() {
                             </div>
                           )}
 
-                          {colTasks.length === 0 && !isOver && (
+                          {tasksLoading && tasks.length === 0 ? (
+                            <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
+                              <Loader2 size={16} className="animate-spin text-primary-500" />
+                              <span className="text-[11px]">Loading tasks...</span>
+                            </div>
+                          ) : colTasks.length === 0 && !isOver ? (
                             <div className="py-8 text-center text-gray-400 text-xs font-normal">
                               No tasks in {col.name}
                             </div>
-                          )}
+                          ) : null}
                         </div>
 
 
@@ -1727,69 +1613,93 @@ export default function ProjectWorkspace() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredTasks.map((task) => (
-                        <tr key={task.id} className="table-row">
-                          <td className="font-semibold text-gray-900">
-                            {task.title}
-                          </td>
-                          <td>
-                            <span className="badge badge-neutral capitalize">
-                              {task.stage.replace('-', ' ')}
-                            </span>
-                          </td>
-                          <td>
-                            <span
-                              className={`badge ${
-                                task.priority === 'High'
-                                  ? 'badge-warning'
-                                  : task.priority === 'Medium'
-                                  ? 'badge-info'
-                                  : 'badge-success'
-                              }`}
-                            >
-                              {task.priority}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="flex items-center gap-2">
-                              <img
-                                src={
-                                  task.assignee.avatar ||
-                                  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
-                                }
-                                alt=""
-                                className="w-5 h-5 rounded-full object-cover"
-                              />
-                              <span className="font-medium text-gray-800">
-                                {task.assignee.name}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="text-gray-500">
-                            {task.dueDate}
-                          </td>
-                          <td style={{ textAlign: 'right' }}>
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                type="button"
-                                className="text-gray-400 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition-colors"
-                                onClick={() => handleOpenEditTask(task)}
-                                title="Edit task"
-                              >
-                                <Edit2 size={13} />
-                              </button>
-                              <button
-                                type="button"
-                                className="text-gray-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 transition-colors"
-                                onClick={() => handleDeleteTask(task)}
-                                title="Delete task"
-                              >
-                                <Trash2 size={13} />
-                              </button>
+                      {tasksLoading && tasks.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="text-center py-10 text-gray-400 text-xs font-normal">
+                            <div className="flex items-center justify-center gap-2">
+                              <Loader2 size={16} className="animate-spin text-primary-500" />
+                              <span>Loading tasks...</span>
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      ) : filteredTasks.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="text-center py-10 text-gray-400 text-xs font-normal">
+                            No tasks found
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredTasks.map((task) => (
+                          <tr key={task.id} className="table-row">
+                            <td className="font-semibold text-gray-900">
+                              {task.title}
+                            </td>
+                            <td>
+                              <span className="badge badge-neutral capitalize">
+                                {task.stage.replace('-', ' ')}
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                className={`badge ${
+                                  task.priority === 'High'
+                                    ? 'badge-warning'
+                                    : task.priority === 'Medium'
+                                    ? 'badge-info'
+                                    : 'badge-success'
+                                }`}
+                              >
+                                {task.priority}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="flex items-center gap-2">
+                                {task.assignee.avatar ? (
+                                  <img
+                                    src={task.assignee.avatar}
+                                    alt={task.assignee.name}
+                                    className="w-5 h-5 rounded-full object-cover shrink-0"
+                                  />
+                                ) : (
+                                  <div
+                                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${getUserColor(
+                                      task.assignee.name
+                                    )}`}
+                                  >
+                                    {getUserInitials(task.assignee.name)}
+                                  </div>
+                                )}
+                                <span className="font-medium text-gray-800">
+                                  {task.assignee.name}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="text-gray-500">
+                              {task.dueDate}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  type="button"
+                                  className="text-gray-400 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition-colors"
+                                  onClick={() => handleOpenEditTask(task)}
+                                  title="Edit task"
+                                >
+                                  <Edit2 size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-gray-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 transition-colors"
+                                  onClick={() => handleDeleteTask(task)}
+                                  title="Delete task"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1815,10 +1725,29 @@ export default function ProjectWorkspace() {
               <span className="text-xs text-gray-500">Overall Progress</span>
               <div className="mt-2 flex items-center justify-between text-sm font-bold text-gray-900">
                 <span>Completed Tasks</span>
-                <span>5 / 16 (31%)</span>
+                <span>
+                  {tasks.filter((t) => t.stage === 'completed').length} / {tasks.length} (
+                  {tasks.length > 0
+                    ? Math.round(
+                        (tasks.filter((t) => t.stage === 'completed').length / tasks.length) * 100
+                      )
+                    : 0}
+                  %)
+                </span>
               </div>
               <div className="w-full bg-gray-200 h-2 rounded-full mt-2 overflow-hidden">
-                <div className="bg-primary-600 h-2 rounded-full" style={{ width: '31%' }} />
+                <div
+                  className="bg-primary-600 h-2 rounded-full"
+                  style={{
+                    width: `${
+                      tasks.length > 0
+                        ? Math.round(
+                            (tasks.filter((t) => t.stage === 'completed').length / tasks.length) * 100
+                          )
+                        : 0
+                    }%`,
+                  }}
+                />
               </div>
             </div>
 
