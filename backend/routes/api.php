@@ -51,9 +51,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     // Public Authentication & Password Reset
-    Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/login', [AuthController::class, 'login'])->name('login');
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/auth/reset-password-request', [AuthController::class, 'forgotPassword']);
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/auth/resend-verification', [AuthController::class, 'resendVerification']);
 
     // Protected Routes (Sanctum)
     Route::middleware('auth:sanctum')->group(function () {
@@ -159,8 +161,26 @@ Route::prefix('v1')->group(function () {
         Route::match(['post', 'put'], '/tasks/{task}/stage', [TaskController::class, 'updateStage']);
         Route::apiResource('tasks', TaskController::class);
 
+        // Subtask Routes (Task-scoped, Project-Task-scoped, and Standalone)
+        Route::get('/tasks/{task}/subtasks', [SubtaskController::class, 'index']);
+        Route::post('/tasks/{task}/subtasks', [SubtaskController::class, 'store']);
+        Route::post('/tasks/{task}/subtasks/reorder', [SubtaskController::class, 'reorder']);
+        Route::get('/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'show']);
+        Route::match(['put', 'patch'], '/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'update']);
+        Route::post('/tasks/{task}/subtasks/{subtask}/toggle', [SubtaskController::class, 'toggle']);
+        Route::delete('/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'destroy']);
+
+        Route::get('/projects/{project}/tasks/{task}/subtasks', [SubtaskController::class, 'index']);
+        Route::post('/projects/{project}/tasks/{task}/subtasks', [SubtaskController::class, 'store']);
+        Route::get('/projects/{project}/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'show']);
+        Route::match(['put', 'patch'], '/projects/{project}/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'update']);
+        Route::post('/projects/{project}/tasks/{task}/subtasks/{subtask}/toggle', [SubtaskController::class, 'toggle']);
+        Route::delete('/projects/{project}/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'destroy']);
+
+        Route::get('/subtasks', [SubtaskController::class, 'index']);
         Route::post('/subtasks', [SubtaskController::class, 'store']);
-        Route::put('/subtasks/{subtask}', [SubtaskController::class, 'update']);
+        Route::get('/subtasks/{subtask}', [SubtaskController::class, 'show']);
+        Route::match(['put', 'patch'], '/subtasks/{subtask}', [SubtaskController::class, 'update']);
         Route::post('/subtasks/{subtask}/toggle', [SubtaskController::class, 'toggle']);
         Route::delete('/subtasks/{subtask}', [SubtaskController::class, 'destroy']);
 

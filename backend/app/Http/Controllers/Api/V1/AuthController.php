@@ -32,7 +32,7 @@ class AuthController extends Controller
             ]);
         }
 
-        if (! in_array($user->status, ['Active', '1', 1, true], true)) {
+        if (! in_array($user->status, ['Active', '1', 1, true], true) || is_null($user->email_verified_at)) {
             return response()->json([
                 'message' => 'Your account is inactive. Please set up your password via the invitation email or contact an administrator.',
             ], 403);
@@ -77,8 +77,10 @@ class AuthController extends Controller
         $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
         $resetUrl = rtrim($frontendUrl, '/').'/reset-password?token='.$token.'&email='.urlencode($user->email);
 
+        $isNewUser = ($user->status === 'Inactive' || is_null($user->email_verified_at));
+
         try {
-            Mail::to($user->email)->send(new UserInvitationMail($user, $resetUrl, false));
+            Mail::to($user->email)->send(new UserInvitationMail($user, $resetUrl, $isNewUser));
         } catch (\Throwable $e) {
             report($e);
         }
@@ -87,6 +89,53 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'If this email is registered in our system, a password reset link has been sent.',
+        ]);
+    }
+
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $user = User::where('email', $validated['email'])->first();
+
+        if (! $user) {
+            return response()->json([
+                'message' => 'If this email is registered in our system, a verification email has been sent.',
+            ]);
+        }
+
+        if (in_array($user->status, ['Active', '1', 1, true], true) && ! is_null($user->email_verified_at)) {
+            return response()->json([
+                'message' => 'This account is already active and verified. You can log in directly.',
+            ], 400);
+        }
+
+        $token = Str::random(64);
+
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            [
+                'email' => $user->email,
+                'token' => Hash::make($token),
+                'created_at' => now(),
+            ]
+        );
+
+        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
+        $resetUrl = rtrim($frontendUrl, '/').'/reset-password?token='.$token.'&email='.urlencode($user->email);
+
+        try {
+            Mail::to($user->email)->send(new UserInvitationMail($user, $resetUrl, true));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        ActivityLogger::log('Verification Resent', "Verification email resent to {$user->email}", $user);
+
+        return response()->json([
+            'message' => 'A verification and password setup link has been sent to your email.',
         ]);
     }
 
@@ -126,6 +175,7 @@ class AuthController extends Controller
 
         $user->password = Hash::make($request->password);
         $user->status = 'Active';
+        $user->email_verified_at = now();
         $user->save();
 
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();

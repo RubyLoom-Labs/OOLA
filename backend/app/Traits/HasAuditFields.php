@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 trait HasAuditFields
 {
@@ -16,7 +17,7 @@ trait HasAuditFields
     {
         static::creating(function (Model $model) {
             if (Auth::check() && empty($model->created_by)) {
-                if (in_array('created_by', $model->getFillable()) || \Illuminate\Support\Facades\Schema::hasColumn($model->getTable(), 'created_by')) {
+                if (in_array('created_by', $model->getFillable()) || Schema::hasColumn($model->getTable(), 'created_by')) {
                     $model->created_by = Auth::id();
                 }
             }
@@ -24,7 +25,7 @@ trait HasAuditFields
 
         static::updating(function (Model $model) {
             if (Auth::check() && $model->isDirty()) {
-                if (in_array('updated_by', $model->getFillable()) || \Illuminate\Support\Facades\Schema::hasColumn($model->getTable(), 'updated_by')) {
+                if (in_array('updated_by', $model->getFillable()) || Schema::hasColumn($model->getTable(), 'updated_by')) {
                     $model->updated_by = Auth::id();
                 }
             }

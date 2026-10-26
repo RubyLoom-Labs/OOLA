@@ -43,10 +43,22 @@ class Task extends BaseModel
     protected static function booted(): void
     {
         static::saving(function (Task $task) {
+            if (! empty($task->taskable_type)) {
+                $type = strtolower((string) $task->taskable_type);
+                if ($type === 'project' || $task->taskable_type === Project::class) {
+                    $task->taskable_type = Project::class;
+                    if (! empty($task->taskable_id) && empty($task->project_id)) {
+                        $task->project_id = $task->taskable_id;
+                    }
+                } elseif ($type === 'lead' || $task->taskable_type === Lead::class) {
+                    $task->taskable_type = Lead::class;
+                }
+            }
+
             if (! empty($task->project_id) && empty($task->taskable_id)) {
                 $task->taskable_type = Project::class;
                 $task->taskable_id = $task->project_id;
-            } elseif (! empty($task->taskable_id) && ($task->taskable_type === Project::class || $task->taskable_type === 'Project') && empty($task->project_id)) {
+            } elseif (! empty($task->taskable_id) && ($task->taskable_type === Project::class || strtolower((string) $task->taskable_type) === 'project') && empty($task->project_id)) {
                 $task->project_id = $task->taskable_id;
             }
         });

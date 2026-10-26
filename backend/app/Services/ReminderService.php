@@ -6,7 +6,6 @@ use App\Mail\TaskDueReminderMail;
 use App\Models\Project;
 use App\Models\Reminder;
 use App\Models\Task;
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -33,8 +32,9 @@ class ReminderService
         foreach ($dueReminders as $reminder) {
             try {
                 $user = $reminder->user;
-                if (!$user) {
+                if (! $user) {
                     $reminder->update(['status' => 'cancelled']);
+
                     continue;
                 }
 
@@ -45,7 +45,7 @@ class ReminderService
                         $project = Project::find($remindable->taskable_id);
                     }
 
-                    $reminderLabel = match($reminder->reminder_type) {
+                    $reminderLabel = match ($reminder->reminder_type) {
                         '30min_before' => 'in 30 minutes',
                         '1h_before' => 'in 1 hour',
                         '1day_before' => 'tomorrow',
@@ -53,7 +53,7 @@ class ReminderService
                     };
 
                     $dueText = $remindable->due_date ? Carbon::parse($remindable->due_date)->format('M d, Y') : 'soon';
-                    $actionUrl = $project ? "/projects/{$project->id}?tab=tasks" : "/tasks";
+                    $actionUrl = $project ? "/projects/{$project->id}?tab=tasks" : '/tasks';
 
                     NotificationService::send(
                         user: $user,
@@ -73,7 +73,7 @@ class ReminderService
 
                 $processedCount++;
             } catch (\Throwable $e) {
-                Log::error("Failed to process reminder #{$reminder->id}: " . $e->getMessage());
+                Log::error("Failed to process reminder #{$reminder->id}: ".$e->getMessage());
             }
         }
 

@@ -86,9 +86,13 @@ class TaskService
     {
         // Normalize taskable_type
         if (! empty($data['taskable_type'])) {
-            if ($data['taskable_type'] === 'project' || $data['taskable_type'] === 'Project') {
+            $type = strtolower((string) $data['taskable_type']);
+            if ($type === 'project' || $data['taskable_type'] === Project::class) {
                 $data['taskable_type'] = Project::class;
-            } elseif ($data['taskable_type'] === 'lead' || $data['taskable_type'] === 'Lead') {
+                if (! empty($data['taskable_id'])) {
+                    $data['project_id'] = $data['taskable_id'];
+                }
+            } elseif ($type === 'lead' || $data['taskable_type'] === Lead::class) {
                 $data['taskable_type'] = Lead::class;
             }
         }
@@ -147,6 +151,19 @@ class TaskService
     {
         $reminderOption = $data['reminder'] ?? null;
         unset($data['reminder']);
+
+        // Normalize taskable_type
+        if (! empty($data['taskable_type'])) {
+            $type = strtolower((string) $data['taskable_type']);
+            if ($type === 'project' || $data['taskable_type'] === Project::class) {
+                $data['taskable_type'] = Project::class;
+                if (! empty($data['taskable_id'])) {
+                    $data['project_id'] = $data['taskable_id'];
+                }
+            } elseif ($type === 'lead' || $data['taskable_type'] === Lead::class) {
+                $data['taskable_type'] = Lead::class;
+            }
+        }
 
         if (! empty($data['stage'])) {
             $stageMap = [
@@ -221,13 +238,13 @@ class TaskService
         }
 
         $users = User::whereIn('id', $userIds)->get();
-        $actionUrl = $project ? "/projects/{$project->id}?tab=tasks" : "/tasks";
+        $actionUrl = $project ? "/projects/{$project->id}?tab=tasks" : '/tasks';
 
         foreach ($users as $user) {
             NotificationService::send(
                 user: $user,
                 title: 'New Task Assigned',
-                message: "You have been assigned to task '{$task->title}'" . ($project ? " in project '{$project->project_title}'" : ""),
+                message: "You have been assigned to task '{$task->title}'".($project ? " in project '{$project->project_title}'" : ''),
                 type: 'task',
                 actionUrl: $actionUrl,
                 mailable: new TaskAssignmentMail($user, $task, $project)
@@ -244,14 +261,14 @@ class TaskService
             return;
         }
 
-        $minutesBefore = match($reminderOption) {
+        $minutesBefore = match ($reminderOption) {
             '30 Mins Before' => 30,
             '1 Hour Before' => 60,
             '1 Day Before' => 1440,
             default => 60,
         };
 
-        $reminderType = match($reminderOption) {
+        $reminderType = match ($reminderOption) {
             '30 Mins Before' => '30min_before',
             '1 Hour Before' => '1h_before',
             '1 Day Before' => '1day_before',

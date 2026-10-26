@@ -160,6 +160,7 @@ class UserManagementAndAuthTest extends TestCase
             'email' => 'forgot@example.com',
             'password' => Hash::make('password123'),
             'status' => 'Active',
+            'email_verified_at' => now(),
         ]);
 
         $response = $this->postJson('/api/v1/auth/forgot-password', [
@@ -286,5 +287,68 @@ class UserManagementAndAuthTest extends TestCase
         $filterResponse->assertStatus(200);
         $filterEmails = collect($filterResponse->json('data'))->pluck('email')->toArray();
         $this->assertEquals($emails, $filterEmails);
+    }
+
+    public function test_unverified_user_cannot_login_even_with_valid_password(): void
+    {
+        $user = User::create([
+            'name' => 'Unverified Guy',
+            'email' => 'unverified@test.com',
+            'password' => Hash::make('secret1234'),
+            'status' => 'Active',
+            'email_verified_at' => null,
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => 'unverified@test.com',
+            'password' => 'secret1234',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJsonPath('message', 'Your account is inactive. Please set up your password via the invitation email or contact an administrator.');
+    }
+
+    public function test_resend_verification_endpoint_dispatches_email_for_unverified_user(): void
+    {
+        $user = User::create([
+            'name' => 'Pending Verification',
+            'email' => 'pending.verify@test.com',
+            'password' => Hash::make('temp-pass'),
+            'status' => 'Inactive',
+            'email_verified_at' => null,
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/resend-verification', [
+            'email' => 'pending.verify@test.com',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'A verification and password setup link has been sent to your email.');
+
+        $this->assertDatabaseHas('password_reset_tokens', [
+            'email' => 'pending.verify@test.com',
+        ]);
+
+        Mail::assertSent(UserInvitationMail::class, function ($mail) use ($user) {
+            return $mail->hasTo($user->email) && $mail->isNewUser;
+        });
+    }
+
+    public function test_reset_password_request_alias_works(): void
+    {
+        $user = User::create([
+            'name' => 'Alias User',
+            'email' => 'alias@test.com',
+            'password' => Hash::make('password123'),
+            'status' => 'Active',
+            'email_verified_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/reset-password-request', [
+            'email' => 'alias@test.com',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'If this email is registered in our system, a password reset link has been sent.');
     }
 }

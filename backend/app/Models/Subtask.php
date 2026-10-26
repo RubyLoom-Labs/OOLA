@@ -28,6 +28,14 @@ class Subtask extends BaseModel
         'is_delete' => 'boolean',
     ];
 
+    protected $attributes = [
+        'is_completed' => false,
+        'priority' => 'Medium',
+        'stage' => 'To Do',
+        'order_column' => 0,
+        'is_delete' => false,
+    ];
+
     public function task(): BelongsTo
     {
         return $this->belongsTo(Task::class);

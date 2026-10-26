@@ -22,7 +22,7 @@ class UserInvitationMail extends Mailable
     public function envelope(): Envelope
     {
         $subject = $this->isNewUser
-            ? 'Welcome to OOLA CRM - Set Up Your Password'
+            ? 'Welcome to OOLA CRM - Verify Your Email & Set Up Your Password'
             : 'Reset Your Password - OOLA CRM';
 
         return new Envelope(

@@ -113,6 +113,74 @@ Revoke current Sanctum token.
 
 ---
 
+### `POST /api/v1/auth/forgot-password` (Public)
+*(Alias: `POST /api/v1/auth/reset-password-request`)*
+Request a password reset link / email. Generates a secure single-use token and sends an email to the user.
+
+#### Request Payload
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+#### Response Structure (`200 OK`)
+```json
+{
+  "message": "If this email is registered in our system, a password reset link has been sent."
+}
+```
+
+---
+
+### `POST /api/v1/auth/reset-password` (Public)
+Reset password using the single-use token received via email. Validates the token and sets a new password, activates the account (`status: "Active"`), and marks the user's email as verified (`email_verified_at: now()`).
+
+#### Request Payload
+```json
+{
+  "email": "user@example.com",
+  "token": "4693a9e3b97b102b4d538e12d4a51e5e6e23730e6955a6d25f778db191a27e7f",
+  "password": "NewSecurePassword123!",
+  "password_confirmation": "NewSecurePassword123!"
+}
+```
+
+#### Response Structure (`200 OK`)
+```json
+{
+  "message": "Password updated successfully. Your account is now active and you can log in."
+}
+```
+
+#### Error Response (`422 Unprocessable Entity`)
+```json
+{
+  "message": "Invalid or expired password reset token."
+}
+```
+
+---
+
+### `POST /api/v1/auth/resend-verification` (Public)
+Resend email verification & password setup link for an unverified/inactive user.
+
+#### Request Payload
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+#### Response Structure (`200 OK`)
+```json
+{
+  "message": "A verification and password setup link has been sent to your email."
+}
+```
+
+---
+
 ## 2. Companies
 
 ### `GET /api/v1/companies/next-code`

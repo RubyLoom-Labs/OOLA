@@ -20,6 +20,8 @@ class SubtaskResource extends JsonResource
             'assigned_user_id' => $this->assigned_user_id,
             'assigned_user' => new UserResource($this->whenLoaded('assignedUser')),
             'order_column' => $this->order_column,
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
         ];
     }
 }

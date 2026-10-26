@@ -69,18 +69,18 @@
             <p>Hello <strong>{{ $user->name }}</strong>,</p>
 
             @if($isNewUser)
-                <p>Your user account has been created on <strong>OOLA CRM</strong>. To activate your account and start using the platform, please set up your account password below:</p>
+                <p>Your user account has been created on <strong>OOLA CRM</strong>. To activate your account and verify your email address, please set up your account password below:</p>
             @else
                 <p>You recently requested a password reset for your <strong>OOLA CRM</strong> account (<strong>{{ $user->email }}</strong>). Please click the button below to set a new password:</p>
             @endif
 
             <div class="btn-wrapper">
                 <a href="{{ $resetUrl }}" class="btn" target="_blank">
-                    {{ $isNewUser ? 'Set Up Your Password' : 'Reset Password' }}
+                    {{ $isNewUser ? 'Verify Email & Set Up Password' : 'Reset Password' }}
                 </a>
             </div>
 
-            <p>This password link will expire in 24 hours. If you did not request this account or password reset, you can safely ignore this email.</p>
+            <p>This verification link will expire in 24 hours. If you did not request this account or password reset, you can safely ignore this email.</p>
 
             <div class="footnote">
                 <p>If you're having trouble clicking the button, copy and paste this URL into your browser:</p>
