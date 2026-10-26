@@ -44,8 +44,18 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
 
-  const displayName = capitalizeWords(user?.name) || 'Alex Morgan'
-  const displayRole = capitalizeWords(user?.role || user?.designation) || 'Super Admin'
+  const extractString = (val: any): string => {
+    if (!val) return ''
+    if (typeof val === 'string') return val
+    if (typeof val === 'object') {
+      return val.name || val.title || val.slug || val.label || ''
+    }
+    return String(val)
+  }
+
+  const displayName = capitalizeWords(extractString(user?.name)) || 'Alex Morgan'
+  const displayRole =
+    capitalizeWords(extractString(user?.role) || extractString(user?.designation)) || 'Super Admin'
   const displayEmail = user?.email || 'admin@ooralabz.com'
 
   const getNotificationIcon = (type: string) => {

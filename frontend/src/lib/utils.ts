@@ -29,13 +29,20 @@ export function getInitials(name: string): string {
  * Example: "chief_operations_officer" -> "Chief Operations Officer"
  * Example: "active" -> "Active"
  */
-export function capitalizeWords(str: string | null | undefined): string {
+export function capitalizeWords(str: any): string {
   if (!str) return ''
+  if (typeof str === 'object') {
+    const val = str.name || str.title || str.slug || str.label || str.value || ''
+    return typeof val === 'string' && val ? capitalizeWords(val) : ''
+  }
+  if (typeof str !== 'string') {
+    str = String(str)
+  }
   return str
     .replace(/[_-]+/g, ' ')
     .trim()
     .split(/\s+/)
-    .map((word) => {
+    .map((word: string) => {
       if (!word) return ''
       return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
     })
@@ -45,8 +52,15 @@ export function capitalizeWords(str: string | null | undefined): string {
 /**
  * Capitalizes only the first letter of a string/sentence.
  */
-export function capitalizeFirstLetter(str: string | null | undefined): string {
+export function capitalizeFirstLetter(str: any): string {
   if (!str) return ''
+  if (typeof str === 'object') {
+    const val = str.name || str.title || str.slug || str.label || str.value || ''
+    return typeof val === 'string' && val ? capitalizeFirstLetter(val) : ''
+  }
+  if (typeof str !== 'string') {
+    str = String(str)
+  }
   const trimmed = str.trim()
   if (!trimmed) return ''
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)

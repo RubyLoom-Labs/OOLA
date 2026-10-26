@@ -5,9 +5,9 @@ export interface AuthUser {
   name: string
   email: string
   phone?: string
-  role?: string
-  designation?: string
-  department?: string
+  role?: string | { id?: number; name?: string; slug?: string; [key: string]: any }
+  designation?: string | { id?: number; title?: string; name?: string; [key: string]: any }
+  department?: string | { id?: number; name?: string; [key: string]: any }
   status?: string
   avatar?: string
   permissions?: string[]
@@ -25,6 +25,33 @@ export interface LoginResponse {
 }
 
 export interface LogoutResponse {
+  message: string
+}
+
+export interface ForgotPasswordPayload {
+  email: string
+}
+
+export interface ForgotPasswordResponse {
+  message: string
+}
+
+export interface ResetPasswordPayload {
+  email: string
+  token: string
+  password: string
+  password_confirmation: string
+}
+
+export interface ResetPasswordResponse {
+  message: string
+}
+
+export interface ResendVerificationPayload {
+  email: string
+}
+
+export interface ResendVerificationResponse {
   message: string
 }
 
@@ -48,6 +75,30 @@ export const authApi = {
    */
   async logout(): Promise<LogoutResponse> {
     return apiClient.post<LogoutResponse>('/auth/logout')
+  },
+
+  /**
+   * Request Password Reset / Forgot Password
+   * POST /api/v1/auth/forgot-password
+   */
+  async forgotPassword(payload: ForgotPasswordPayload): Promise<ForgotPasswordResponse> {
+    return apiClient.post<ForgotPasswordResponse>('/auth/forgot-password', payload)
+  },
+
+  /**
+   * Reset Password & Verify Account
+   * POST /api/v1/auth/reset-password
+   */
+  async resetPassword(payload: ResetPasswordPayload): Promise<ResetPasswordResponse> {
+    return apiClient.post<ResetPasswordResponse>('/auth/reset-password', payload)
+  },
+
+  /**
+   * Resend Verification Email (Public)
+   * POST /api/v1/auth/resend-verification
+   */
+  async resendVerification(payload: ResendVerificationPayload): Promise<ResendVerificationResponse> {
+    return apiClient.post<ResendVerificationResponse>('/auth/resend-verification', payload)
   },
 }
 

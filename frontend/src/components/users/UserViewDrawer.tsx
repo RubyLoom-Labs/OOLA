@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Edit2,
   Trash2,
@@ -10,12 +10,14 @@ import {
   Briefcase,
   Phone,
   Calendar,
-  Clock,
   CheckCircle2,
   XCircle,
   KeyRound,
   IdCard,
   Loader2,
+  Send,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
 import SlideDrawer from '@/components/common/SlideDrawer'
 import {
@@ -23,6 +25,7 @@ import {
   type ProjectUser,
   getUserRoleName,
 } from '@/apis/usersApi'
+import { authApi } from '@/apis/authApi'
 import { getUserColor, getUserInitials } from './UserSelect'
 
 interface UserViewDrawerProps {
@@ -43,6 +46,48 @@ export default function UserViewDrawer({
   const [userDetails, setUserDetails] = useState<ProjectUser | null>(user)
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'permissions' | 'employee'>('overview')
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailFeedback, setEmailFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleSendActivationLink = async () => {
+    if (!displayUser?.email) return
+    setSendingEmail(true)
+    setEmailFeedback(null)
+    try {
+      const res = await authApi.resendVerification({ email: displayUser.email })
+      setEmailFeedback({
+        type: 'success',
+        message: res.message || 'Verification & password setup email has been dispatched.',
+      })
+    } catch (err: any) {
+      setEmailFeedback({
+        type: 'error',
+        message: err?.message || 'Failed to dispatch verification email.',
+      })
+    } finally {
+      setSendingEmail(false)
+    }
+  }
+
+  const handleSendResetLink = async () => {
+    if (!displayUser?.email) return
+    setSendingEmail(true)
+    setEmailFeedback(null)
+    try {
+      const res = await authApi.forgotPassword({ email: displayUser.email })
+      setEmailFeedback({
+        type: 'success',
+        message: res.message || 'Password reset link has been dispatched to user email.',
+      })
+    } catch (err: any) {
+      setEmailFeedback({
+        type: 'error',
+        message: err?.message || 'Failed to dispatch password reset email.',
+      })
+    } finally {
+      setSendingEmail(false)
+    }
+  }
 
   useEffect(() => {
     if (!isOpen || !user) {
@@ -158,6 +203,16 @@ export default function UserViewDrawer({
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
+                disabled={sendingEmail}
+                className="btn btn-outline btn-sm text-xs px-2.5 py-1.5 rounded-xl flex items-center gap-1 text-blue-600 hover:bg-blue-50 hover:border-blue-200 cursor-pointer disabled:opacity-50"
+                onClick={handleSendActivationLink}
+                title="Send Verification & Password Setup Link"
+              >
+                <Send size={13} className={sendingEmail ? 'animate-spin' : ''} />
+                <span>{sendingEmail ? 'Sending...' : 'Send Link'}</span>
+              </button>
+              <button
+                type="button"
                 className="btn btn-outline btn-sm text-xs px-2.5 py-1.5 rounded-xl flex items-center gap-1 text-slate-700 hover:text-blue-600 hover:border-blue-200"
                 onClick={() => onEdit(displayUser)}
                 title="Edit User"
@@ -236,12 +291,56 @@ export default function UserViewDrawer({
 
           {activeTab === 'overview' && (
             <div className="space-y-4">
+              {/* Email Feedback Banner */}
+              {emailFeedback && (
+                <div
+                  className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 border ${
+                    emailFeedback.type === 'success'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-rose-50 text-rose-800 border-rose-200'
+                  }`}
+                >
+                  {emailFeedback.type === 'success' ? (
+                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <p className="font-semibold">
+                      {emailFeedback.type === 'success' ? 'Email Dispatched' : 'Email Dispatch Failed'}
+                    </p>
+                    <p className="text-[11px] mt-0.5">{emailFeedback.message}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEmailFeedback(null)}
+                    className="text-slate-400 hover:text-slate-600 text-xs font-bold"
+                  >
+                    &times;
+                  </button>
+                </div>
+              )}
+
               {/* Account Details Card */}
               <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <UserCheck size={14} className="text-blue-500" />
-                  <span>Account Information</span>
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <UserCheck size={14} className="text-blue-500" />
+                    <span>Account Information</span>
+                  </h3>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={sendingEmail}
+                      onClick={handleSendResetLink}
+                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/70 px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                      title="Send Password Reset Email"
+                    >
+                      <KeyRound size={11} />
+                      <span>Send Reset Link</span>
+                    </button>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <div>

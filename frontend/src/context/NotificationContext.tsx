@@ -166,7 +166,11 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       })
 
       es.onerror = () => {
-        // EventSource automatically retries on disconnect
+        // If SSE connection fails or server returns 401 Unauthorized, close connection and rely on polling fallback
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close()
+          eventSourceRef.current = null
+        }
       }
     } catch (err) {
       console.warn('EventSource initialization failed, relying on background polling:', err)

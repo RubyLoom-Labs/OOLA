@@ -165,6 +165,69 @@ export interface ProjectStats {
   total_budget: number
 }
 
+export interface ProjectTaskItem {
+  id: number
+  task_code: string
+  title: string
+  description?: string | null
+  task_type?: string
+  priority?: string
+  task_stage_id: number
+  project_id: number
+  project?: {
+    id: number
+    project_title: string
+    project_code: string
+  }
+  stage?: {
+    id: number
+    name: string
+    slug: string
+    color: string
+    order_column?: number
+  }
+  status?: string
+  start_date?: string | null
+  due_date?: string | null
+  estimated_minutes?: number | null
+  actual_minutes?: number | null
+  users?: Array<{
+    id: number
+    name: string
+    email?: string
+    avatar?: string | null
+    is_employee?: boolean
+    designation?: string
+  }>
+  subtasks?: any[]
+  subtasks_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ProjectTaskPayload {
+  title: string
+  description?: string
+  task_type?: string
+  priority?: string
+  task_stage_id?: number
+  status?: string
+  start_date?: string
+  due_date?: string
+  estimated_minutes?: number
+  user_ids?: number[]
+}
+
+export interface KanbanStageGroup {
+  id: number
+  name: string
+  slug: string
+  color: string
+  order_column: number
+  is_completed?: boolean
+  tasks: ProjectTaskItem[]
+}
+
 export function normalizeProject(p: Project): Project {
   if (!p) return p
 
@@ -499,6 +562,84 @@ export const projectsApi = {
   ): Promise<ApiResponse<{ message: string }>> {
     return await apiClient.delete<ApiResponse<{ message: string }>>(
       `/projects/${projectId}/attachments/${attachmentId}`
+    )
+  },
+
+  /**
+   * GET /api/v1/projects/{projectId}/tasks
+   * Retrieve all tasks for a specific project
+   */
+  async getProjectTasks(
+    projectId: number | string
+  ): Promise<ApiResponse<ProjectTaskItem[]>> {
+    return await apiClient.get<ApiResponse<ProjectTaskItem[]>>(
+      `/projects/${projectId}/tasks`
+    )
+  },
+
+  /**
+   * GET /api/v1/projects/{projectId}/tasks/kanban
+   * Retrieve kanban grouped stages and tasks for a project
+   */
+  async getProjectTasksKanban(
+    projectId: number | string
+  ): Promise<KanbanStageGroup[]> {
+    const res = await apiClient.get<any>(`/projects/${projectId}/tasks/kanban`)
+    return Array.isArray(res) ? res : res?.data || []
+  },
+
+  /**
+   * POST /api/v1/projects/{projectId}/tasks
+   * Create task inside a project
+   */
+  async createProjectTask(
+    projectId: number | string,
+    payload: ProjectTaskPayload
+  ): Promise<ApiResponse<ProjectTaskItem>> {
+    return await apiClient.post<ApiResponse<ProjectTaskItem>>(
+      `/projects/${projectId}/tasks`,
+      payload
+    )
+  },
+
+  /**
+   * GET /api/v1/projects/{projectId}/tasks/{taskId}
+   * Retrieve single task details inside a project
+   */
+  async getProjectTask(
+    projectId: number | string,
+    taskId: number | string
+  ): Promise<ApiResponse<ProjectTaskItem>> {
+    return await apiClient.get<ApiResponse<ProjectTaskItem>>(
+      `/projects/${projectId}/tasks/${taskId}`
+    )
+  },
+
+  /**
+   * PATCH /api/v1/projects/{projectId}/tasks/{taskId}
+   * Update task inside a project (status, stage, title, priority, etc.)
+   */
+  async updateProjectTask(
+    projectId: number | string,
+    taskId: number | string,
+    payload: Partial<ProjectTaskPayload>
+  ): Promise<ApiResponse<ProjectTaskItem>> {
+    return await apiClient.patch<ApiResponse<ProjectTaskItem>>(
+      `/projects/${projectId}/tasks/${taskId}`,
+      payload
+    )
+  },
+
+  /**
+   * DELETE /api/v1/projects/{projectId}/tasks/{taskId}
+   * Remove / delete task from a project
+   */
+  async deleteProjectTask(
+    projectId: number | string,
+    taskId: number | string
+  ): Promise<ApiResponse<{ message: string }>> {
+    return await apiClient.delete<ApiResponse<{ message: string }>>(
+      `/projects/${projectId}/tasks/${taskId}`
     )
   },
 }

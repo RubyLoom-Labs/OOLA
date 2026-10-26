@@ -245,8 +245,7 @@ export default function Users() {
       {
         key: 'name',
         header: 'User',
-        sortable: true,
-        render: (_val, user) => {
+        render: (user: ProjectUser) => {
           return (
             <div className="flex items-center gap-3">
               {user.avatar ? (
@@ -277,8 +276,7 @@ export default function Users() {
       {
         key: 'role',
         header: 'Role',
-        sortable: true,
-        render: (_val, user) => {
+        render: (user: ProjectUser) => {
           const roleName = getUserRoleName(user) || 'User'
           return (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
@@ -291,7 +289,7 @@ export default function Users() {
       {
         key: 'employee',
         header: 'Employee Link',
-        render: (_val, user) => {
+        render: (user: ProjectUser) => {
           if (user.is_employee && user.employee) {
             return (
               <div className="min-w-0">
@@ -315,9 +313,8 @@ export default function Users() {
       {
         key: 'status',
         header: 'Status',
-        sortable: true,
-        render: (status) => {
-          const s = String(status || 'Active').toLowerCase()
+        render: (user: ProjectUser) => {
+          const s = String(user.status || 'Active').toLowerCase()
           return (
             <span
               className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -331,7 +328,7 @@ export default function Users() {
               ) : (
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
               )}
-              {status || 'Active'}
+              {user.status || 'Active'}
             </span>
           )
         },
@@ -339,12 +336,11 @@ export default function Users() {
       {
         key: 'created_at',
         header: 'Joined Date',
-        sortable: true,
-        render: (date) => {
-          if (!date) return <span className="text-slate-400 text-xs">—</span>
+        render: (user: ProjectUser) => {
+          if (!user.created_at) return <span className="text-slate-400 text-xs">—</span>
           return (
             <span className="text-xs text-slate-600">
-              {new Date(date).toLocaleDateString('en-US', {
+              {new Date(user.created_at).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
@@ -357,7 +353,7 @@ export default function Users() {
         key: 'actions',
         header: 'Actions',
         align: 'right',
-        render: (_val, user) => (
+        render: (user: ProjectUser) => (
           <div onClick={(e) => e.stopPropagation()}>
             <ActionDropdown
               items={[

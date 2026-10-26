@@ -30,10 +30,13 @@ import {
   UserPlus,
   Save,
   CheckCircle,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react'
 import {
   projectsApi,
   type Project,
+  type ProjectTaskPayload,
 } from '@/apis/projectsApi'
 import { tasksApi } from '@/apis/tasksApi'
 import { getUserColor, getUserInitials } from '@/components/users/UserSelect'
@@ -319,6 +322,18 @@ const parseDateToInputFormat = (dateStr?: string): string => {
   return ''
 }
 
+const getApiErrorMessage = (err: any, fallback = 'Operation failed'): string => {
+  if (err?.errors && typeof err.errors === 'object') {
+    const errorStrings = Object.values(err.errors)
+      .flat()
+      .filter(Boolean)
+    if (errorStrings.length > 0) {
+      return errorStrings.join(' ')
+    }
+  }
+  return err?.response?.data?.message || err?.message || fallback
+}
+
 export default function ProjectWorkspace() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -382,11 +397,15 @@ export default function ProjectWorkspace() {
   const [showDeleteProjectModal, setShowDeleteProjectModal] = useState(false)
 
   // Toast notification
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const showToast = (msg: string) => {
-    setToastMessage(msg)
-    setTimeout(() => setToastMessage(null), 3500)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 4000)
   }
+
+  // Task form loading and error state
+  const [taskFormLoading, setTaskFormLoading] = useState(false)
+  const [taskFormError, setTaskFormError] = useState<string | null>(null)
 
   // Persist tasks in localStorage per project
   useEffect(() => {
@@ -469,21 +488,51 @@ export default function ProjectWorkspace() {
     setDragOverStage(null)
   }
 
-  const handleDrop = (e: React.DragEvent, targetStage: KanbanTask['stage']) => {
+  const handleDrop = async (e: React.DragEvent, targetStage: KanbanTask['stage']) => {
     e.preventDefault()
     const taskId = e.dataTransfer.getData('text/plain') || draggingTaskId
     if (!taskId) return
 
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, stage: targetStage } : t))
-    )
     setDraggingTaskId(null)
     setDragOverStage(null)
+
+    const existingTask = tasks.find((t) => t.id === taskId)
+    if (!existingTask || existingTask.stage === targetStage) return
+
+    // If it's a backend task, sync with backend before updating state
+    if (!taskId.startsWith('task-')) {
+      try {
+        await tasksApi.updateTask(taskId, { stage: targetStage })
+        setTasks((prev) => {
+          const updated = prev.map((t) => (t.id === taskId ? { ...t, stage: targetStage } : t))
+          if (id) {
+            localStorage.setItem(`project_tasks_${id}`, JSON.stringify(updated))
+          }
+          return updated
+        })
+        showToast(`Task moved to "${targetStage.replace('-', ' ')}".`, 'success')
+      } catch (err: any) {
+        console.error('Backend updateTask stage failed:', err)
+        const errorMsg = getApiErrorMessage(err, 'Failed to update task stage.')
+        showToast(errorMsg, 'error')
+        // Do NOT update FE state; remains in existingTask.stage
+      }
+    } else {
+      setTasks((prev) => {
+        const updated = prev.map((t) => (t.id === taskId ? { ...t, stage: targetStage } : t))
+        if (id) {
+          localStorage.setItem(`project_tasks_${id}`, JSON.stringify(updated))
+        }
+        return updated
+      })
+    }
   }
 
   // Open Create Task Modal
   const handleOpenCreateTask = (stageId?: KanbanTask['stage']) => {
     setEditingTaskId(null)
+    setTaskFormError(null)
+    setTaskFormLoading(false)
     setNewTaskTitle('')
     setNewTaskDesc('')
     setNewTaskStage(stageId || 'to-do')
@@ -506,6 +555,8 @@ export default function ProjectWorkspace() {
   // Open Edit Task Modal
   const handleOpenEditTask = (task: KanbanTask) => {
     setEditingTaskId(task.id)
+    setTaskFormError(null)
+    setTaskFormLoading(false)
     setNewTaskTitle(task.title)
     setNewTaskDesc(task.description || '')
     setNewTaskAssignee(task.assignee.name)
@@ -543,13 +594,22 @@ export default function ProjectWorkspace() {
     if (!taskToDelete) return
     const taskId = taskToDelete.id
     const taskTitle = taskToDelete.title
+
+    // If it's a backend task, call API and await response
     if (!taskId.startsWith('task-')) {
       try {
         await tasksApi.deleteTask(taskId)
-      } catch (err) {
-        console.warn('Backend deleteTask failed (may be mock):', err)
+      } catch (err: any) {
+        console.error('Backend deleteTask failed:', err)
+        const errorMsg = getApiErrorMessage(err, `Failed to delete task "${taskTitle}".`)
+        showToast(errorMsg, 'error')
+        setTaskToDelete(null)
+        // CRITICAL: Do NOT delete from FE state on backend error!
+        return
       }
     }
+
+    // Backend succeeded (or mock task): update FE state
     setTasks((prev) => {
       const updated = prev.filter((t) => t.id !== taskId)
       if (id) {
@@ -558,7 +618,7 @@ export default function ProjectWorkspace() {
       return updated
     })
     setTaskToDelete(null)
-    showToast(`Task "${taskTitle}" deleted successfully.`)
+    showToast(`Task "${taskTitle}" deleted successfully.`, 'success')
   }
 
   // Handle Confirm Delete Project
@@ -574,9 +634,12 @@ export default function ProjectWorkspace() {
   }
 
   // Handle Save Task (Create or Update)
-  const handleSaveTask = (e: React.FormEvent) => {
+  const handleSaveTask = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newTaskTitle.trim()) return
+
+    setTaskFormError(null)
+    setTaskFormLoading(true)
 
     const assignedUser = projectAssignedUsers.find((u) => u.name === newTaskAssignee)
     const isManager = assignedUser && assignedUser.id === displayProject.manager?.id
@@ -614,91 +677,95 @@ export default function ProjectWorkspace() {
       user_ids: assignedUser ? [assignedUser.id] : [],
     }
 
-    if (editingTaskId) {
-      // Edit existing task in backend
-      if (!editingTaskId.startsWith('task-')) {
-        tasksApi.updateTask(editingTaskId, taskPayload).catch((err) => {
-          console.warn('Backend updateTask failed (using local sync):', err)
-        })
-      }
-
-      setTasks((prev) => {
-        const updated = prev.map((t) => {
-          if (t.id === editingTaskId) {
-            return {
-              ...t,
-              title: newTaskTitle.trim(),
-              description: newTaskDesc.trim() || undefined,
-              priority: newTaskPriority,
-              taskType: newTaskType,
-              stage: newTaskStage,
-              assignee: {
-                name: newTaskAssignee || assignedUser?.name || t.assignee.name || 'Unassigned',
-                avatar: (assignedUser as any)?.avatar || t.assignee.avatar,
-                role: userRole,
-              },
-              dueDate: formattedDueDate || t.dueDate,
-            }
-          }
-          return t
-        })
-        if (id) {
-          localStorage.setItem(`project_tasks_${id}`, JSON.stringify(updated))
+    try {
+      if (editingTaskId) {
+        // Edit existing task in backend
+        let updatedTaskData: any = null
+        if (!editingTaskId.startsWith('task-')) {
+          const res = await tasksApi.updateTask(editingTaskId, taskPayload)
+          updatedTaskData = (res as any)?.data?.data || (res as any)?.data || res
         }
-        return updated
-      })
-      showToast(`Task "${newTaskTitle.trim()}" updated successfully.`)
-    } else {
-      // Create new task in backend
-      const tempId = `task-${Date.now()}`
-      tasksApi
-        .createTask(taskPayload)
-        .then((res) => {
-          const created = (res as any)?.data?.data || res?.data
-          if (created?.id) {
-            setTasks((prev) => {
-              const updated = prev.map((t) => (t.id === tempId ? { ...t, id: String(created.id) } : t))
-              if (id) {
-                localStorage.setItem(`project_tasks_${id}`, JSON.stringify(updated))
+
+        // ONLY if backend succeeded, update frontend state
+        setTasks((prev) => {
+          const updated = prev.map((t) => {
+            if (t.id === editingTaskId) {
+              return {
+                ...t,
+                title: updatedTaskData?.title || newTaskTitle.trim(),
+                description: updatedTaskData?.description ?? (newTaskDesc.trim() || undefined),
+                priority: updatedTaskData?.priority || newTaskPriority,
+                taskType: updatedTaskData?.task_type || newTaskType,
+                stage: newTaskStage,
+                assignee: {
+                  name: newTaskAssignee || assignedUser?.name || t.assignee.name || 'Unassigned',
+                  avatar: (assignedUser as any)?.avatar || t.assignee.avatar,
+                  role: userRole,
+                },
+                dueDate: formattedDueDate || t.dueDate,
               }
-              return updated
-            })
+            }
+            return t
+          })
+          if (id) {
+            localStorage.setItem(`project_tasks_${id}`, JSON.stringify(updated))
           }
-        })
-        .catch((err) => {
-          console.warn('Backend createTask failed (falling back to local):', err)
+          return updated
         })
 
-      const newTask: KanbanTask = {
-        id: tempId,
-        title: newTaskTitle.trim(),
-        description: newTaskDesc.trim() || undefined,
-        priority: newTaskPriority,
-        taskType: newTaskType,
-        stage: newTaskStage,
-        assignee: {
-          name: newTaskAssignee || assignedUser?.name || 'Unassigned',
-          avatar: (assignedUser as any)?.avatar,
-          role: userRole,
-        },
-        dueDate: formattedDueDate || 'Oct 25, 2026',
-        subtasksCount: 0,
+        showToast(`Task "${newTaskTitle.trim()}" updated successfully.`, 'success')
+      } else {
+        // Create new task in backend
+        const res = await tasksApi.createTask(taskPayload)
+        const created = (res as any)?.data?.data || (res as any)?.data || res
+        const realId = created?.id ? String(created.id) : `task-${Date.now()}`
+
+        const newTask: KanbanTask = {
+          id: realId,
+          title: created?.title || newTaskTitle.trim(),
+          description: created?.description || (newTaskDesc.trim() || undefined),
+          priority: created?.priority || newTaskPriority,
+          taskType: created?.task_type || newTaskType,
+          stage: newTaskStage,
+          assignee: {
+            name: newTaskAssignee || assignedUser?.name || 'Unassigned',
+            avatar: (assignedUser as any)?.avatar,
+            role: userRole,
+          },
+          dueDate: formattedDueDate || 'Oct 25, 2026',
+          subtasksCount: 0,
+        }
+
+        // ONLY if backend succeeded, update frontend state
+        setTasks((prev) => {
+          const updated = [newTask, ...prev]
+          if (id) {
+            localStorage.setItem(`project_tasks_${id}`, JSON.stringify(updated))
+          }
+          return updated
+        })
+
+        showToast(`Task "${newTaskTitle.trim()}" created successfully.`, 'success')
       }
 
-      setTasks((prev) => {
-        const updated = [newTask, ...prev]
-        if (id) {
-          localStorage.setItem(`project_tasks_${id}`, JSON.stringify(updated))
-        }
-        return updated
-      })
-      showToast(`Task "${newTaskTitle.trim()}" created successfully.`)
+      // Close modal and reset form only on success
+      setEditingTaskId(null)
+      setNewTaskTitle('')
+      setNewTaskDesc('')
+      setTaskFormError(null)
+      setShowAddTaskModal(false)
+    } catch (err: any) {
+      console.error('Task operation failed in backend:', err)
+      const errorMsg = getApiErrorMessage(
+        err,
+        editingTaskId ? 'Failed to update task.' : 'Failed to create task.'
+      )
+      // Display error inside modal and via toast, keeping modal open and FE state intact!
+      setTaskFormError(errorMsg)
+      showToast(errorMsg, 'error')
+    } finally {
+      setTaskFormLoading(false)
     }
-
-    setEditingTaskId(null)
-    setNewTaskTitle('')
-    setNewTaskDesc('')
-    setShowAddTaskModal(false)
   }
 
   // Active Display Project with robust fallback
@@ -888,10 +955,20 @@ export default function ProjectWorkspace() {
   return (
     <div className="contacts-module-container animate-fade-in">
       {/* Toast Feedback */}
-      {toastMessage && (
-        <div className="module-toast animate-slide-up">
-          <CheckCircle size={16} className="text-success-500" />
-          <span>{toastMessage}</span>
+      {toast && (
+        <div
+          className={`module-toast animate-slide-up flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-xs font-medium ${
+            toast.type === 'error'
+              ? 'bg-rose-50 border border-rose-200 text-rose-800'
+              : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+          }`}
+        >
+          {toast.type === 'error' ? (
+            <AlertCircle size={16} className="text-rose-600 shrink-0" />
+          ) : (
+            <CheckCircle size={16} className="text-emerald-600 shrink-0" />
+          )}
+          <span>{toast.message}</span>
         </div>
       )}
 
@@ -1939,6 +2016,14 @@ export default function ProjectWorkspace() {
 
             {/* Modal Form */}
             <form onSubmit={handleSaveTask} className="p-5 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+              {/* Error Alert */}
+              {taskFormError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-start gap-2.5 animate-shake">
+                  <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                  <span className="flex-1 font-medium leading-relaxed">{taskFormError}</span>
+                </div>
+              )}
+
               {/* Task Title */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1.5">
@@ -2088,20 +2173,32 @@ export default function ProjectWorkspace() {
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
-                  className="btn btn-outline btn-sm text-xs px-4 rounded-xl"
+                  disabled={taskFormLoading}
+                  className="btn btn-outline btn-sm text-xs px-4 rounded-xl disabled:opacity-50"
                   onClick={() => {
                     setShowAddTaskModal(false)
                     setEditingTaskId(null)
+                    setTaskFormError(null)
                   }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary btn-sm text-xs px-4 flex items-center gap-1.5 rounded-xl shadow-xs"
+                  disabled={taskFormLoading}
+                  className="btn btn-primary btn-sm text-xs px-4 flex items-center gap-1.5 rounded-xl shadow-xs disabled:opacity-60 cursor-pointer"
                 >
-                  {editingTaskId ? <Save size={14} /> : <Plus size={14} />}
-                  <span>{editingTaskId ? 'Save Changes' : 'Create Task'}</span>
+                  {taskFormLoading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>{editingTaskId ? 'Saving...' : 'Creating...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      {editingTaskId ? <Save size={14} /> : <Plus size={14} />}
+                      <span>{editingTaskId ? 'Save Changes' : 'Create Task'}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

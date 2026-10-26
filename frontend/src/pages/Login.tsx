@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import {
   User,
   Lock,
@@ -355,16 +355,12 @@ export default function Login() {
                   <span>Remember me</span>
                 </label>
 
-                <a
-                  href="#forgot-password"
+                <Link
+                  to="/forgot-password"
                   className="login-forgot-link"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setInfoMessage('Please contact your administrator to reset your password.')
-                  }}
                 >
                   Forgot password?
-                </a>
+                </Link>
               </div>
 
               {/* Sign In Button */}
@@ -385,18 +381,26 @@ export default function Login() {
             </form>
 
             {/* Card Footer */}
-            <div className="login-card-footer">
-              <span>Don't have an account? </span>
-              <a
-                href="#contact-admin"
-                className="login-contact-link"
-                onClick={(e) => {
-                  e.preventDefault()
-                  setInfoMessage('Please contact your administrator for system account creation.')
-                }}
-              >
-                Contact your administrator
-              </a>
+            <div className="login-card-footer flex flex-col items-center gap-1.5 text-center mt-5">
+              <div>
+                <span>Don't have an account? </span>
+                <a
+                  href="#contact-admin"
+                  className="login-contact-link"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setInfoMessage('Please contact your administrator for system account creation.')
+                  }}
+                >
+                  Contact your administrator
+                </a>
+              </div>
+              <div className="text-[11px] text-slate-400">
+                Need to activate your account?{' '}
+                <Link to="/forgot-password?mode=verify" className="text-blue-600 hover:underline font-medium">
+                  Resend setup link
+                </Link>
+              </div>
             </div>
           </div>
         </div>
