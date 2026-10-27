@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Http\Resources\CompanyResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,7 +16,7 @@ class LeadResource extends JsonResource
             'lead_title' => $this->lead_title,
             'requirement_name' => $this->requirement_name,
             'requirement_details' => $this->requirement_details,
-            'customer' => new CustomerResource($this->whenLoaded('customer')),
+            'customer' => new CompanyResource($this->whenLoaded('customer')),
             'contact' => $this->whenLoaded('contact'),
             'stage' => $this->whenLoaded('stage'),
             'source' => $this->whenLoaded('source'),

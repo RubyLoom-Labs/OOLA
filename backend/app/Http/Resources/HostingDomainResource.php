@@ -13,7 +13,7 @@ class HostingDomainResource extends JsonResource
             'id' => $this->id,
             'domain_name' => $this->domain_name,
             'customer_id' => $this->customer_id,
-            'customer' => new CustomerResource($this->whenLoaded('customer')),
+            'customer' => new CompanyResource($this->whenLoaded('customer')),
             'contact_id' => $this->contact_id,
             'provider' => $this->provider,
             'purchase_date' => $this->purchase_date?->format('Y-m-d'),

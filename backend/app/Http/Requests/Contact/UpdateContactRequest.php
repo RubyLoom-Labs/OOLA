@@ -11,11 +11,27 @@ class UpdateContactRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Map frontend customer_id / customerId onto company_id (companies).
+     */
+    protected function prepareForValidation(): void
+    {
+        $companyId = $this->input('company_id') ?? $this->input('customer_id') ?? $this->input('customerId') ?? $this->input('companyId');
+        if ($companyId !== null && $companyId !== '') {
+            $this->merge([
+                'company_id' => (int) $companyId,
+                'customer_id' => (int) $companyId,
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'company_id' => ['nullable', 'integer', 'exists:companies,id'],
-            'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
+            'customer_id' => ['nullable', 'integer', 'exists:companies,id'],
+            'customerId' => ['nullable', 'integer', 'exists:companies,id'],
+            'companyId' => ['nullable', 'integer', 'exists:companies,id'],
             'company' => ['nullable', 'string', 'max:255'],
             'company_name' => ['nullable', 'string', 'max:255'],
             'first_name' => ['sometimes', 'nullable', 'string', 'max:100'],

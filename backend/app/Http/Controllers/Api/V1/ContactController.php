@@ -25,11 +25,10 @@ class ContactController extends Controller
     {
         $query = Contact::with(['sites', 'phoneNumbers', 'primaryPhoneNumber', 'company:id,company_name']);
 
-        // Safe filtering by company_id / customer_id
-        if ($request->filled('company_id')) {
-            $query->where('company_id', (int) $request->input('company_id'));
-        } elseif ($request->filled('customer_id')) {
-            $query->where('company_id', (int) $request->input('customer_id'));
+        // Safe filtering by company_id (frontend customer_id / customerId is treated as company_id)
+        $filterCompanyId = $request->input('company_id') ?? $request->input('customer_id') ?? $request->input('customerId') ?? $request->input('companyId');
+        if (! empty($filterCompanyId)) {
+            $query->where('company_id', (int) $filterCompanyId);
         }
 
         // Safe filtering by status (boolean 1/0, true/false, 'Active' string fallback)
@@ -417,17 +416,18 @@ class ContactController extends Controller
      */
     protected function normalizeContactData(array $data): array
     {
+        // Support company_id aliases from frontend (customer_id / customerId)
+        $companyId = $data['company_id'] ?? $data['customer_id'] ?? $data['customerId'] ?? $data['companyId'] ?? null;
+        if ($companyId !== null && $companyId !== '') {
+            $data['company_id'] = (int) $companyId;
+        }
+        unset($data['customer_id'], $data['customerId'], $data['companyId']);
+
         // Support company_name -> company
         if (isset($data['company_name']) && ! isset($data['company'])) {
             $data['company'] = $data['company_name'];
         }
         unset($data['company_name']);
-
-        // Support customer_id -> company_id
-        if (isset($data['customer_id']) && ! isset($data['company_id'])) {
-            $data['company_id'] = $data['customer_id'];
-        }
-        unset($data['customer_id']);
 
         // Strip non-contact columns passed from frontend form payloads
         unset($data['notes']);

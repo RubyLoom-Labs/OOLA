@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Http\Resources\CompanyResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,7 +15,7 @@ class HostingResource extends JsonResource
             'domain_name' => $this->domain_name ?? $this->server_name ?? $this->service_type,
             'type' => isset($this->domain_name) ? 'domain' : (isset($this->server_name) ? 'server' : 'service'),
             'provider' => $this->provider,
-            'customer' => new CustomerResource($this->whenLoaded('customer')),
+            'customer' => new CompanyResource($this->whenLoaded('customer')),
             'cost_price' => (float) $this->cost_price,
             'selling_price' => (float) $this->selling_price,
             'purchase_date' => $this->purchase_date?->format('Y-m-d'),

@@ -14,7 +14,7 @@ class PaymentResource extends JsonResource
             'payment_code' => $this->payment_code,
             'invoice_number' => $this->invoice_number,
             'customer_id' => $this->customer_id,
-            'customer' => new CustomerResource($this->whenLoaded('customer')),
+            'customer' => new CompanyResource($this->whenLoaded('customer')),
             'project_id' => $this->project_id,
             'project' => new ProjectResource($this->whenLoaded('project')),
             'quotation_id' => $this->quotation_id,

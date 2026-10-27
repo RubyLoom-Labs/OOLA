@@ -29,9 +29,14 @@ class HostingController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if ($request->has('company_id') && ! $request->has('customer_id')) {
+            $request->merge(['customer_id' => $request->input('company_id')]);
+        }
+
         $request->validate([
             'type' => ['required', 'in:domain,server,service'],
-            'customer_id' => ['required', 'exists:customers,id'],
+            'customer_id' => ['required', 'exists:companies,id'],
+            'company_id' => ['nullable', 'exists:companies,id'],
             'name' => ['required', 'string'],
             'provider' => ['nullable', 'string'],
             'cost_price' => ['nullable', 'numeric', 'min:0'],

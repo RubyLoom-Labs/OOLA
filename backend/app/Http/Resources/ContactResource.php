@@ -17,11 +17,13 @@ class ContactResource extends JsonResource
         // Resolve company name concisely
         $companyName = is_string($this->company) && ! empty($this->company)
             ? $this->company
-            : ($companyRelation?->company_name ?? ($this->relationLoaded('customer') && $this->getRelation('customer') ? $this->getRelation('customer')->company_name : null));
+            : ($companyRelation?->company_name);
 
         return [
             'id' => $this->id,
             'company_id' => $this->company_id,
+            'customer_id' => $this->company_id,
+            'customerId' => $this->company_id,
             'company_name' => $companyName,
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
@@ -39,6 +41,9 @@ class ContactResource extends JsonResource
 
             // Detailed company and projects info when loaded
             'company' => $this->when($companyRelation !== null, function () use ($companyRelation) {
+                return new CompanyResource($companyRelation);
+            }),
+            'customer' => $this->when($companyRelation !== null, function () use ($companyRelation) {
                 return new CompanyResource($companyRelation);
             }),
             'projects' => $this->when($this->relationLoaded('directProjects') || $this->relationLoaded('projects') || $companyRelation !== null, function () {

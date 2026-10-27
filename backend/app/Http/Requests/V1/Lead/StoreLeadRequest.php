@@ -11,13 +11,24 @@ class StoreLeadRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('company_id') && ! $this->has('customer_id')) {
+            $this->merge(['customer_id' => $this->input('company_id')]);
+        }
+        if ($this->has('customer_id') && ! $this->has('company_id')) {
+            $this->merge(['company_id' => $this->input('customer_id')]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'lead_title' => ['required', 'string', 'max:255'],
             'requirement_name' => ['nullable', 'string', 'max:255'],
             'requirement_details' => ['nullable', 'string'],
-            'customer_id' => ['nullable', 'exists:customers,id'],
+            'customer_id' => ['nullable', 'exists:companies,id'],
+            'company_id' => ['nullable', 'exists:companies,id'],
             'contact_id' => ['nullable', 'exists:contacts,id'],
             'lead_source_id' => ['nullable', 'exists:lead_sources,id'],
             'lead_stage_id' => ['nullable', 'exists:lead_stages,id'],

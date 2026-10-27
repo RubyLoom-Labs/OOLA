@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Http\Resources\CompanyResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,7 +15,7 @@ class ProjectResource extends JsonResource
             'project_code' => $this->project_code,
             'project_title' => $this->project_title,
             'description' => $this->description,
-            'customer' => new CustomerResource($this->whenLoaded('customer')),
+            'customer' => new CompanyResource($this->whenLoaded('customer')),
             'lead' => $this->whenLoaded('lead'),
             'manager' => new UserResource($this->whenLoaded('manager')),
             'stage' => $this->whenLoaded('stage'),

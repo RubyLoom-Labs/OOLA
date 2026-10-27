@@ -14,7 +14,7 @@ class QuotationResource extends JsonResource
             'quotation_number' => $this->quotation_number,
             'title' => $this->title,
             'customer_id' => $this->customer_id,
-            'customer' => new CustomerResource($this->whenLoaded('customer')),
+            'customer' => new CompanyResource($this->whenLoaded('customer')),
             'project_id' => $this->project_id,
             'project' => new ProjectResource($this->whenLoaded('project')),
             'lead_id' => $this->lead_id,

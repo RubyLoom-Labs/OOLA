@@ -21,7 +21,7 @@ class CalendarEventResource extends JsonResource
             'reminder_before_minutes' => $this->reminder_before_minutes,
             'user_id' => $this->user_id,
             'customer_id' => $this->customer_id,
-            'customer' => new CustomerResource($this->whenLoaded('customer')),
+            'customer' => new CompanyResource($this->whenLoaded('customer')),
             'lead_id' => $this->lead_id,
             'project_id' => $this->project_id,
             'created_at' => $this->created_at?->toISOString(),

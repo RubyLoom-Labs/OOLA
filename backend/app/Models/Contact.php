@@ -43,7 +43,7 @@ class Contact extends BaseModel
     }
 
     /**
-     * Get the associated customer/company (Customer model).
+     * Backward compatibility / alias for company (Company model).
      */
     public function customer(): BelongsTo
     {
@@ -169,8 +169,8 @@ class Contact extends BaseModel
             return $directCount;
         }
 
-        if ($this->company_id && $this->relationLoaded('customer') && $this->customer) {
-            return $this->customer->projects()->count();
+        if ($this->company_id && $this->relationLoaded('company') && $this->getRelation('company')) {
+            return $this->getRelation('company')->projects()->count();
         }
 
         return $directCount;

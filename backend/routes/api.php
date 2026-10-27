@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\V1\CompanyTypeController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\ContactPhoneNumberController;
 use App\Http\Controllers\Api\V1\CrmNotificationController;
-use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\DesignationController;
@@ -96,9 +95,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/companies/{id}/contacts', [CompanyController::class, 'contacts']);
         Route::apiResource('companies', CompanyController::class);
 
-        // Customers (legacy compatibility) & Contacts & Phone Numbers
-        Route::post('/customers/{id}/restore', [CustomerController::class, 'restore']);
-        Route::apiResource('customers', CustomerController::class);
+        // Customers compatibility aliases pointing to CompanyController
+        Route::get('/customers/next-code', [CompanyController::class, 'nextCode']);
+        Route::get('/customers/lookup', [CompanyController::class, 'lookup']);
+        Route::get('/customers/active-list', [CompanyController::class, 'lookup']);
+        Route::post('/customers/{id}/restore', [CompanyController::class, 'restore']);
+        Route::get('/customers/{id}/contacts', [CompanyController::class, 'contacts']);
+        Route::apiResource('customers', CompanyController::class);
+
+        // Contacts & Phone Numbers
         Route::post('/contacts/{id}/restore', [ContactController::class, 'restore']);
         Route::get('/contacts/{contact}/projects', [ContactController::class, 'projectsHistory']);
         Route::apiResource('contacts', ContactController::class);

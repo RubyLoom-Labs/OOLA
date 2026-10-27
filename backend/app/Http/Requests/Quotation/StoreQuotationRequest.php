@@ -11,11 +11,22 @@ class StoreQuotationRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('company_id') && ! $this->has('customer_id')) {
+            $this->merge(['customer_id' => $this->input('company_id')]);
+        }
+        if ($this->has('customer_id') && ! $this->has('company_id')) {
+            $this->merge(['company_id' => $this->input('customer_id')]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'title' => ['nullable', 'string', 'max:255'],
-            'customer_id' => ['required', 'exists:customers,id'],
+            'customer_id' => ['required', 'exists:companies,id'],
+            'company_id' => ['nullable', 'exists:companies,id'],
             'project_id' => ['nullable', 'exists:projects,id'],
             'lead_id' => ['nullable', 'exists:leads,id'],
             'template_id' => ['nullable', 'exists:quotation_templates,id'],

@@ -17,8 +17,12 @@ class CompanyResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'customer_id' => $this->id,
+            'customerId' => $this->id,
             'company_code' => $this->company_code,
+            'customer_code' => $this->company_code,
             'company_name' => $this->company_name,
+            'name' => $this->company_name,
             'company_type_id' => $this->company_type_id,
             'company_type' => new CompanyTypeResource($this->whenLoaded('companyType')),
             'email' => $this->email,

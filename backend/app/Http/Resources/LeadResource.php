@@ -16,7 +16,7 @@ class LeadResource extends JsonResource
             'requirement_name' => $this->requirement_name,
             'requirement_details' => $this->requirement_details,
             'customer_id' => $this->customer_id,
-            'customer' => new CustomerResource($this->whenLoaded('customer')),
+            'customer' => new CompanyResource($this->whenLoaded('customer')),
             'contact_id' => $this->contact_id,
             'contact' => new ContactResource($this->whenLoaded('contact')),
             'lead_stage_id' => $this->lead_stage_id,

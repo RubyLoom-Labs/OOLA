@@ -321,4 +321,116 @@ class ContactExtendedTest extends TestCase
         $this->assertNotNull($avatarPath);
         Storage::disk('public')->assertExists($avatarPath);
     }
+
+    public function test_can_create_update_and_filter_contact_by_company_id(): void
+    {
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $company = Company::first();
+
+        // 1. POST /api/v1/contacts with company_id
+        $postResponse = $this->actingAs($admin, 'sanctum')->postJson('/api/v1/contacts', [
+            'company_id' => $company->id,
+            'company_name' => $company->company_name,
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'email' => 'john.doe@test.com',
+            'designation' => 'Director',
+            'status' => true,
+        ]);
+
+        $postResponse->assertStatus(201)
+            ->assertJsonPath('data.company_id', $company->id)
+            ->assertJsonPath('data.first_name', 'John')
+            ->assertJsonPath('data.last_name', 'Doe');
+
+        $contactId = $postResponse->json('data.id');
+
+        // Verify saved in DB
+        $this->assertDatabaseHas('contacts', [
+            'id' => $contactId,
+            'company_id' => $company->id,
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+        ]);
+
+        // 2. PUT /api/v1/contacts/{id}
+        $putResponse = $this->actingAs($admin, 'sanctum')->putJson("/api/v1/contacts/{$contactId}", [
+            'company_id' => $company->id,
+            'first_name' => 'Johnathon',
+        ]);
+
+        $putResponse->assertStatus(200)
+            ->assertJsonPath('data.company_id', $company->id)
+            ->assertJsonPath('data.first_name', 'Johnathon');
+
+        // 3. GET /api/v1/contacts with filter company_id
+        $filterResponse = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/contacts?company_id={$company->id}");
+        $filterResponse->assertStatus(200);
+        $contactIds = collect($filterResponse->json('data'))->pluck('id')->toArray();
+        $this->assertContains($contactId, $contactIds);
+
+        // 4. GET /api/v1/contacts/{id}
+        $getResponse = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/contacts/{$contactId}");
+        $getResponse->assertStatus(200)
+            ->assertJsonPath('data.id', $contactId)
+            ->assertJsonPath('data.company_id', $company->id)
+            ->assertJsonPath('data.customer_id', $company->id)
+            ->assertJsonPath('data.first_name', 'Johnathon');
+    }
+
+    public function test_can_create_update_and_filter_contact_using_customer_id_alias(): void
+    {
+        $admin = User::where('email', 'admin@ooralabz.com')->first();
+        $company = Company::first();
+
+        // 1. POST /api/v1/contacts with customer_id (frontend convention)
+        $postResponse = $this->actingAs($admin, 'sanctum')->postJson('/api/v1/contacts', [
+            'customer_id' => $company->id,
+            'first_name' => 'Michael',
+            'last_name' => 'Scott',
+            'email' => 'michael.scott@dundermifflin.com',
+            'designation' => 'Regional Manager',
+            'status' => true,
+        ]);
+
+        $postResponse->assertStatus(201)
+            ->assertJsonPath('data.company_id', $company->id)
+            ->assertJsonPath('data.customer_id', $company->id)
+            ->assertJsonPath('data.customerId', $company->id)
+            ->assertJsonPath('data.first_name', 'Michael')
+            ->assertJsonPath('data.last_name', 'Scott');
+
+        $contactId = $postResponse->json('data.id');
+
+        // Verify stored in DB with company_id
+        $this->assertDatabaseHas('contacts', [
+            'id' => $contactId,
+            'company_id' => $company->id,
+            'first_name' => 'Michael',
+        ]);
+
+        // 2. PUT /api/v1/contacts/{id} with customer_id
+        $putResponse = $this->actingAs($admin, 'sanctum')->putJson("/api/v1/contacts/{$contactId}", [
+            'customer_id' => $company->id,
+            'first_name' => 'Michael Gary',
+        ]);
+
+        $putResponse->assertStatus(200)
+            ->assertJsonPath('data.company_id', $company->id)
+            ->assertJsonPath('data.customer_id', $company->id)
+            ->assertJsonPath('data.first_name', 'Michael Gary');
+
+        // 3. GET /api/v1/contacts with filter ?customer_id=
+        $filterResponse = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/contacts?customer_id={$company->id}");
+        $filterResponse->assertStatus(200);
+        $contactIds = collect($filterResponse->json('data'))->pluck('id')->toArray();
+        $this->assertContains($contactId, $contactIds);
+
+        // 4. GET /api/v1/contacts/{id} returns customer_id and company_id
+        $getResponse = $this->actingAs($admin, 'sanctum')->getJson("/api/v1/contacts/{$contactId}");
+        $getResponse->assertStatus(200)
+            ->assertJsonPath('data.id', $contactId)
+            ->assertJsonPath('data.company_id', $company->id)
+            ->assertJsonPath('data.customer_id', $company->id);
+    }
 }
