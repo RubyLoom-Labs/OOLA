@@ -36,7 +36,6 @@ import {
 import {
   projectsApi,
   type Project,
-  type ProjectTaskPayload,
 } from '@/apis/projectsApi'
 import { tasksApi } from '@/apis/tasksApi'
 import { getUserColor, getUserInitials } from '@/components/users/UserSelect'

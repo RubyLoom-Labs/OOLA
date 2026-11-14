@@ -14,6 +14,7 @@ import Companies from '@/pages/Companies'
 import CreateQuotation from '@/pages/quotes/CreateQuotation'
 import Projects from '@/pages/Projects'
 import ProjectWorkspace from '@/pages/ProjectWorkspace'
+import Inquiries from '@/pages/Inquiries'
 import PlaceholderPage from '@/pages/PlaceholderPage'
 
 function App() {
@@ -31,6 +32,12 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/website" element={<Navigate to="/website/inquiry" replace />} />
+              <Route path="/website/inquiry" element={<Inquiries />} />
+              <Route path="/website/inquiries" element={<Inquiries />} />
+              <Route path="/website/inquery" element={<Inquiries />} />
+              <Route path="/inquiries" element={<Inquiries />} />
+              <Route path="/inquery" element={<Inquiries />} />
               <Route path="/leads" element={<Leads />} />
               <Route path="/companies" element={<Companies />} />
               <Route path="/customers" element={<Navigate to="/companies" replace />} />

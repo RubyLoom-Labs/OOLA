@@ -17,7 +17,6 @@ import {
   Loader2,
   Send,
   AlertCircle,
-  RefreshCw,
 } from 'lucide-react'
 import SlideDrawer from '@/components/common/SlideDrawer'
 import {

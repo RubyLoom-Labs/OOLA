@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useLocation, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useLocation, Link, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   Users,
@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Crown,
+  Globe,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -34,6 +35,14 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+  {
+    label: 'Website',
+    icon: Globe,
+    path: '/website',
+    children: [
+      { label: 'Inquiry', path: '/website/inquiry' },
+    ],
+  },
   { label: 'Leads', icon: Users, path: '/leads' },
   { label: 'Companies', icon: Building2, path: '/companies' },
   { label: 'Contacts', icon: Users, path: '/contacts' },
@@ -63,7 +72,12 @@ const navItems: NavItem[] = [
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation()
-  const [expandedItems, setExpandedItems] = useState<string[]>(['Quotes'])
+  const navigate = useNavigate()
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Quotes', 'Quotation Generator', 'Website'])
+
+  useEffect(() => {
+    setExpandedItems((prev) => (prev.includes('Website') ? prev : [...prev, 'Website']))
+  }, [])
 
   const toggleExpand = (label: string) => {
     setExpandedItems((prev) =>
@@ -103,7 +117,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               {hasChildren ? (
                 <div
                   className={`sidebar-nav-item ${active ? 'active' : ''} ${isExpanded ? 'expanded' : ''}`}
-                  onClick={() => toggleExpand(item.label)}
+                  onClick={() => {
+                    toggleExpand(item.label)
+                    if (!isExpanded && item.children && item.children.length > 0) {
+                      navigate(item.children[0].path)
+                    }
+                  }}
                 >
                   <Icon className="sidebar-nav-icon" />
                   <span className="sidebar-nav-label">{item.label}</span>
