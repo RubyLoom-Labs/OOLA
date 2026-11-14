@@ -20,6 +20,7 @@ use App\Models\Expense;
 use App\Models\HostingDomain;
 use App\Models\HostingServer;
 use App\Models\HostingService;
+use App\Models\Inquiry;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\LeadStage;
@@ -621,5 +622,28 @@ class DatabaseSeeder extends Seeder
             'causer_id' => $admin->id,
             'causer_name' => $admin->name,
         ]);
+
+        // 18. Sample Website Inquiries
+        Inquiry::firstOrCreate(
+            ['email' => 'kavan.perera@ceylontech.lk', 'subject' => 'Enterprise ERP & Cloud Modernization Inquiry'],
+            [
+                'first_name' => 'Kavan',
+                'last_name' => 'Perera',
+                'contact_number' => '+94 77 458 9210',
+                'message' => "Hello Ruby Loom Labs Team,\n\nWe are looking to modernize our legacy ERP and warehouse management system across 4 distribution centers in Sri Lanka. Our key requirements include:\n1. Real-time inventory synchronization and barcode scanning mobile application.\n2. Automated multi-currency billing and supplier portal.\n3. Role-based executive analytics dashboard with daily automated reporting.\n4. Dedicated cloud infrastructure setup with 99.9% uptime SLA.\n\nCould we schedule a discovery call this week to discuss timelines and budget estimates?\n\nBest regards,\nKavan Perera",
+                'status' => true,
+            ]
+        );
+
+        Inquiry::firstOrCreate(
+            ['email' => 'amanda.silva@oceanichotels.com', 'subject' => 'Custom Booking Engine & CRM Integration'],
+            [
+                'first_name' => 'Amanda',
+                'last_name' => 'Silva',
+                'contact_number' => '+94 11 289 4455',
+                'message' => 'We would like a quotation for redesigning our hospitality group website with a direct room booking engine, payment gateway integration, and guest CRM synchronization.',
+                'status' => true,
+            ]
+        );
     }
 }

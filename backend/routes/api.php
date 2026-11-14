@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\HostingDomainController;
 use App\Http\Controllers\Api\V1\HostingServerController;
 use App\Http\Controllers\Api\V1\HostingServiceController;
+use App\Http\Controllers\Api\V1\InquiryController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\LeadSourceController;
 use App\Http\Controllers\Api\V1\LeadStageController;
@@ -55,6 +56,39 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/reset-password-request', [AuthController::class, 'forgotPassword']);
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
     Route::post('/auth/resend-verification', [AuthController::class, 'resendVerification']);
+
+    // Public Website Inquiry Submission & Listing (Open POST for Website, GET for CRM)
+    Route::get('/inquiries', [InquiryController::class, 'index']);
+    Route::post('/inquiries', [InquiryController::class, 'store']);
+    Route::get('/inquiries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+
+    Route::get('/inquiry', [InquiryController::class, 'index']);
+    Route::post('/inquiry', [InquiryController::class, 'store']);
+    Route::get('/inquiry/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+
+    Route::get('/inquery', [InquiryController::class, 'index']);
+    Route::post('/inquery', [InquiryController::class, 'store']);
+    Route::get('/inquery/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+
+    Route::get('/inqueries', [InquiryController::class, 'index']);
+    Route::post('/inqueries', [InquiryController::class, 'store']);
+    Route::get('/inqueries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+
+    Route::get('/website/inquiries', [InquiryController::class, 'index']);
+    Route::post('/website/inquiries', [InquiryController::class, 'store']);
+    Route::get('/website/inquiries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+
+    Route::get('/website/inquiry', [InquiryController::class, 'index']);
+    Route::post('/website/inquiry', [InquiryController::class, 'store']);
+    Route::get('/website/inquiry/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+
+    Route::get('/website/inquery', [InquiryController::class, 'index']);
+    Route::post('/website/inquery', [InquiryController::class, 'store']);
+    Route::get('/website/inquery/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+
+    Route::get('/website/inqueries', [InquiryController::class, 'index']);
+    Route::post('/website/inqueries', [InquiryController::class, 'store']);
+    Route::get('/website/inqueries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
 
     // Protected Routes (Sanctum)
     Route::middleware('auth:sanctum')->group(function () {
@@ -242,3 +276,21 @@ Route::prefix('v1')->group(function () {
         Route::get('/activity-logs', [ActivityLogController::class, 'index']);
     });
 });
+
+// Top-level /api/* Inquiry aliases (without /v1 prefix)
+Route::get('/inquiries', [InquiryController::class, 'index']);
+Route::post('/inquiries', [InquiryController::class, 'store']);
+Route::get('/inquiries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+
+Route::get('/inquiry', [InquiryController::class, 'index']);
+Route::post('/inquiry', [InquiryController::class, 'store']);
+Route::get('/inquiry/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+
+Route::get('/inquery', [InquiryController::class, 'index']);
+Route::post('/inquery', [InquiryController::class, 'store']);
+Route::get('/inquery/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+
+Route::get('/inqueries', [InquiryController::class, 'index']);
+Route::post('/inqueries', [InquiryController::class, 'store']);
+Route::get('/inqueries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+
