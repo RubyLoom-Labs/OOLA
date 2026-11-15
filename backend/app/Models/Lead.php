@@ -10,10 +10,17 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class Lead extends BaseModel
 {
     protected $fillable = [
+        'inquiry_id',
         'lead_code',
         'lead_title',
         'requirement_name',
         'requirement_details',
+        'first_name',
+        'last_name',
+        'email',
+        'contact_number',
+        'subject',
+        'message',
         'customer_id',
         'contact_id',
         'lead_source_id',

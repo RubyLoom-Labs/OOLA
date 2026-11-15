@@ -11,10 +11,17 @@ class LeadResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'inquiry_id' => $this->inquiry_id,
             'lead_code' => $this->lead_code,
             'lead_title' => $this->lead_title,
             'requirement_name' => $this->requirement_name,
             'requirement_details' => $this->requirement_details,
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
+            'email' => $this->email,
+            'contact_number' => $this->contact_number,
+            'subject' => $this->subject,
+            'message' => $this->message,
             'customer_id' => $this->customer_id,
             'customer' => new CompanyResource($this->whenLoaded('customer')),
             'contact_id' => $this->contact_id,

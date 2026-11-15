@@ -15,11 +15,16 @@ class LeadService
             ->withCount(['tasks']);
 
         if (! empty($filters['search'])) {
-            $search = $filters['search'];
+            $search = trim((string) $filters['search']);
             $query->where(function ($q) use ($search) {
                 $q->where('lead_title', 'like', "%{$search}%")
                     ->orWhere('lead_code', 'like', "%{$search}%")
                     ->orWhere('requirement_name', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('contact_number', 'like', "%{$search}%")
+                    ->orWhere('subject', 'like', "%{$search}%")
                     ->orWhereHas('customer', function ($cq) use ($search) {
                         $cq->where('company_name', 'like', "%{$search}%");
                     });
@@ -44,7 +49,7 @@ class LeadService
     public function getKanban(): Collection
     {
         return LeadStage::with(['leads' => function ($query) {
-            $query->with(['customer', 'contact', 'users', 'tasks'])
+            $query->with(['customer', 'contact', 'stage', 'source', 'users', 'tasks'])
                 ->withCount('tasks')
                 ->latest();
         }])->orderBy('order_column')->get();
@@ -106,18 +111,26 @@ class LeadService
         $newStage = LeadStage::find($stageId);
         if ($newStage?->is_won) {
             $lead->status = 'Won';
+            $lead->lost_at = null;
         } elseif ($newStage?->is_lost) {
             $lead->status = 'Lost';
             $lead->lost_at = now();
+        } elseif (in_array($lead->status, ['Won', 'Lost'], true)) {
+            $lead->status = 'Active';
+            $lead->lost_at = null;
         }
 
         $lead->save();
 
-        ActivityLogger::log(
-            'Lead Stage Changed',
-            "Stage changed from {$oldStage} to {$newStage?->name}",
-            $lead
-        );
+        try {
+            ActivityLogger::log(
+                'Lead Stage Changed',
+                "Stage changed from {$oldStage} to {$newStage?->name}",
+                $lead
+            );
+        } catch (\Throwable) {
+            // Ignore activity log errors
+        }
 
         return $lead;
     }

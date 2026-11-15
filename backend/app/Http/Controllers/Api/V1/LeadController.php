@@ -77,7 +77,7 @@ class LeadController extends Controller
         }
 
         $lead = $this->service->updateStage($lead, (int) $stageId);
-        $resource = new LeadResource($lead->load('stage'));
+        $resource = new LeadResource($lead->load(['customer', 'contact', 'stage', 'source', 'users']));
 
         return response()->json([
             'message' => 'Lead stage updated successfully',

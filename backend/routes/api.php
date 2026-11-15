@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\ActivityLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CalendarEventController;
+use App\Http\Controllers\Api\V1\CommentController;
 use App\Http\Controllers\Api\V1\CommunicationLogController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\CompanySizeController;
@@ -57,41 +58,31 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
     Route::post('/auth/resend-verification', [AuthController::class, 'resendVerification']);
 
-    // Public Website Inquiry Submission & Listing (Open POST for Website, GET for CRM)
-    Route::get('/inquiries', [InquiryController::class, 'index']);
-    Route::post('/inquiries', [InquiryController::class, 'store']);
-    Route::get('/inquiries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
-
-    Route::get('/inquiry', [InquiryController::class, 'index']);
-    Route::post('/inquiry', [InquiryController::class, 'store']);
-    Route::get('/inquiry/{id}', [InquiryController::class, 'show'])->whereNumber('id');
-
-    Route::get('/inquery', [InquiryController::class, 'index']);
-    Route::post('/inquery', [InquiryController::class, 'store']);
-    Route::get('/inquery/{id}', [InquiryController::class, 'show'])->whereNumber('id');
-
-    Route::get('/inqueries', [InquiryController::class, 'index']);
-    Route::post('/inqueries', [InquiryController::class, 'store']);
-    Route::get('/inqueries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
-
-    Route::get('/website/inquiries', [InquiryController::class, 'index']);
-    Route::post('/website/inquiries', [InquiryController::class, 'store']);
-    Route::get('/website/inquiries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
-
-    Route::get('/website/inquiry', [InquiryController::class, 'index']);
-    Route::post('/website/inquiry', [InquiryController::class, 'store']);
-    Route::get('/website/inquiry/{id}', [InquiryController::class, 'show'])->whereNumber('id');
-
-    Route::get('/website/inquery', [InquiryController::class, 'index']);
-    Route::post('/website/inquery', [InquiryController::class, 'store']);
-    Route::get('/website/inquery/{id}', [InquiryController::class, 'show'])->whereNumber('id');
-
-    Route::get('/website/inqueries', [InquiryController::class, 'index']);
-    Route::post('/website/inqueries', [InquiryController::class, 'store']);
-    Route::get('/website/inqueries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
-
     // Protected Routes (Sanctum)
     Route::middleware('auth:sanctum')->group(function () {
+        // Website Inquiry Submission & Listing (Requires Bearer Token)
+        foreach (['inquiries', 'inquiry', 'inquery', 'inqueries', 'website/inquiries', 'website/inquiry', 'website/inquery', 'website/inqueries'] as $inqPath) {
+            Route::get("/{$inqPath}", [InquiryController::class, 'index']);
+            Route::post("/{$inqPath}", [InquiryController::class, 'store']);
+            Route::get("/{$inqPath}/{id}", [InquiryController::class, 'show'])->whereNumber('id');
+            Route::match(['post', 'put', 'patch'], "/{$inqPath}/{id}/convert-to-lead", [InquiryController::class, 'convertToLead'])->whereNumber('id');
+            Route::delete("/{$inqPath}/{id}", [InquiryController::class, 'destroy'])->whereNumber('id');
+        }
+
+        // Website Comments Submission, Listing, Approval & Status Management
+        foreach (['comments', 'comment', 'website/comments', 'website/comment'] as $cmtPath) {
+            Route::get("/{$cmtPath}", [CommentController::class, 'index']);
+            Route::get("/{$cmtPath}/display", [CommentController::class, 'displayComments']);
+            Route::get("/{$cmtPath}/home", [CommentController::class, 'displayComments']);
+            Route::get("/{$cmtPath}/approved", [CommentController::class, 'approvedComments']);
+            Route::post("/{$cmtPath}", [CommentController::class, 'store']);
+            Route::get("/{$cmtPath}/{id}", [CommentController::class, 'show'])->whereNumber('id');
+            Route::match(['post', 'put', 'patch'], "/{$cmtPath}/{id}/image", [CommentController::class, 'uploadImage'])->whereNumber('id');
+            Route::match(['post', 'put', 'patch'], "/{$cmtPath}/{id}/approve", [CommentController::class, 'approve'])->whereNumber('id');
+            Route::match(['post', 'put', 'patch'], "/{$cmtPath}/{id}/status", [CommentController::class, 'updateStatus'])->whereNumber('id');
+            Route::match(['put', 'patch'], "/{$cmtPath}/{id}", [CommentController::class, 'updateStatus'])->whereNumber('id');
+            Route::delete("/{$cmtPath}/{id}", [CommentController::class, 'destroy'])->whereNumber('id');
+        }
         // Auth & Profile
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -145,7 +136,7 @@ Route::prefix('v1')->group(function () {
 
         // Leads & Pipelines
         Route::get('/leads/kanban', [LeadController::class, 'kanban']);
-        Route::match(['post', 'put'], '/leads/{lead}/stage', [LeadController::class, 'updateStage']);
+        Route::match(['post', 'put', 'patch'], '/leads/{lead}/stage', [LeadController::class, 'updateStage']);
         Route::post('/leads/{lead}/users', [LeadController::class, 'assignUser']);
         Route::delete('/leads/{lead}/users/{userId}', [LeadController::class, 'removeUser']);
         Route::apiResource('leads', LeadController::class);
@@ -277,20 +268,28 @@ Route::prefix('v1')->group(function () {
     });
 });
 
-// Top-level /api/* Inquiry aliases (without /v1 prefix)
-Route::get('/inquiries', [InquiryController::class, 'index']);
-Route::post('/inquiries', [InquiryController::class, 'store']);
-Route::get('/inquiries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+// Top-level /api/* Inquiry & Comment aliases (Protected by Sanctum)
+Route::middleware('auth:sanctum')->group(function () {
+    foreach (['inquiries', 'inquiry', 'inquery', 'inqueries'] as $inqPath) {
+        Route::get("/{$inqPath}", [InquiryController::class, 'index']);
+        Route::post("/{$inqPath}", [InquiryController::class, 'store']);
+        Route::get("/{$inqPath}/{id}", [InquiryController::class, 'show'])->whereNumber('id');
+        Route::match(['post', 'put', 'patch'], "/{$inqPath}/{id}/convert-to-lead", [InquiryController::class, 'convertToLead'])->whereNumber('id');
+        Route::delete("/{$inqPath}/{id}", [InquiryController::class, 'destroy'])->whereNumber('id');
+    }
 
-Route::get('/inquiry', [InquiryController::class, 'index']);
-Route::post('/inquiry', [InquiryController::class, 'store']);
-Route::get('/inquiry/{id}', [InquiryController::class, 'show'])->whereNumber('id');
-
-Route::get('/inquery', [InquiryController::class, 'index']);
-Route::post('/inquery', [InquiryController::class, 'store']);
-Route::get('/inquery/{id}', [InquiryController::class, 'show'])->whereNumber('id');
-
-Route::get('/inqueries', [InquiryController::class, 'index']);
-Route::post('/inqueries', [InquiryController::class, 'store']);
-Route::get('/inqueries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+    foreach (['comments', 'comment'] as $cmtPath) {
+        Route::get("/{$cmtPath}", [CommentController::class, 'index']);
+        Route::get("/{$cmtPath}/display", [CommentController::class, 'displayComments']);
+        Route::get("/{$cmtPath}/home", [CommentController::class, 'displayComments']);
+        Route::get("/{$cmtPath}/approved", [CommentController::class, 'approvedComments']);
+        Route::post("/{$cmtPath}", [CommentController::class, 'store']);
+        Route::get("/{$cmtPath}/{id}", [CommentController::class, 'show'])->whereNumber('id');
+        Route::match(['post', 'put', 'patch'], "/{$cmtPath}/{id}/image", [CommentController::class, 'uploadImage'])->whereNumber('id');
+        Route::match(['post', 'put', 'patch'], "/{$cmtPath}/{id}/approve", [CommentController::class, 'approve'])->whereNumber('id');
+        Route::match(['post', 'put', 'patch'], "/{$cmtPath}/{id}/status", [CommentController::class, 'updateStatus'])->whereNumber('id');
+        Route::match(['put', 'patch'], "/{$cmtPath}/{id}", [CommentController::class, 'updateStatus'])->whereNumber('id');
+        Route::delete("/{$cmtPath}/{id}", [CommentController::class, 'destroy'])->whereNumber('id');
+    }
+});
 

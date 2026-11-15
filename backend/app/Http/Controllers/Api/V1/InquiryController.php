@@ -5,19 +5,25 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inquiry\StoreInquiryRequest;
 use App\Http\Resources\InquiryResource;
+use App\Http\Resources\LeadResource;
 use App\Models\Inquiry;
+use App\Models\Lead;
+use App\Models\LeadSource;
+use App\Models\LeadStage;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class InquiryController extends Controller
 {
     /**
-     * Display a paginated listing of website inquiries with search and sorting.
+     * Display a paginated listing of active website inquiries (status = 1 and is_delete = 0).
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Inquiry::query();
+        $query = Inquiry::where('status', true)
+            ->where('is_delete', false);
 
         // Safe parameterized search
         if ($request->filled('search')) {
@@ -87,11 +93,13 @@ class InquiryController extends Controller
     }
 
     /**
-     * Store a newly submitted inquiry from the company website (public endpoint).
+     * Store a newly submitted inquiry from the company website.
      */
     public function store(StoreInquiryRequest $request): JsonResponse
     {
         $payload = $request->validated();
+        $payload['status'] = true;
+        $payload['is_delete'] = false;
 
         $inquiry = Inquiry::create($payload);
 
@@ -102,7 +110,7 @@ class InquiryController extends Controller
                 $inquiry
             );
         } catch (\Throwable) {
-            // Ignore activity logging errors for unauthenticated public submissions
+            // Ignore activity logging errors
         }
 
         return response()->json([
@@ -121,6 +129,99 @@ class InquiryController extends Controller
 
         return response()->json([
             'data' => new InquiryResource($inquiry),
+        ]);
+    }
+
+    /**
+     * Convert an inquiry into a Lead record in the database and mark inquiry status = 0.
+     */
+    public function convertToLead(int $id): JsonResponse
+    {
+        $inquiry = Inquiry::where('is_delete', false)->findOrFail($id);
+
+        $lead = DB::transaction(function () use ($inquiry) {
+            // 1. Mark inquiry status = 0 (converted to lead, no longer shown in Inquiry tab)
+            $inquiry->status = false;
+            $inquiry->save();
+
+            // 2. Resolve default Lead Stage ('New') and Lead Source ('Website Inbound')
+            $newStage = LeadStage::where('slug', 'new')->first()
+                ?? LeadStage::orderBy('order_column', 'asc')->first();
+
+            $websiteSource = LeadSource::where('slug', 'website')->first()
+                ?? LeadSource::first();
+
+            $fullName = trim("{$inquiry->first_name} {$inquiry->last_name}");
+            $leadTitle = ! empty($inquiry->subject)
+                ? $inquiry->subject
+                : "Website Inquiry - {$fullName}";
+
+            $leadCode = 'LEAD-'.date('Y').'-'.strtoupper(substr(uniqid(), -5));
+
+            // 3. Create Lead record in leads table with all inquiry details
+            return Lead::create([
+                'inquiry_id' => $inquiry->id,
+                'lead_code' => $leadCode,
+                'lead_title' => $leadTitle,
+                'requirement_name' => $inquiry->subject ?: "Inquiry from {$fullName}",
+                'requirement_details' => $inquiry->message,
+                'first_name' => $inquiry->first_name,
+                'last_name' => $inquiry->last_name,
+                'email' => $inquiry->email,
+                'contact_number' => $inquiry->contact_number,
+                'subject' => $inquiry->subject,
+                'message' => $inquiry->message,
+                'lead_source_id' => $websiteSource?->id,
+                'lead_stage_id' => $newStage?->id,
+                'budget_quoted' => 0,
+                'currency' => 'LKR',
+                'priority' => 'Medium',
+                'status' => 'Active',
+                'next_step' => 'Follow up with '.$fullName,
+            ]);
+        });
+
+        try {
+            ActivityLogger::log(
+                'Inquiry Converted to Lead',
+                "Converted inquiry #{$inquiry->id} ({$inquiry->first_name} {$inquiry->last_name}) to Lead {$lead->lead_code}",
+                $lead
+            );
+        } catch (\Throwable) {
+            // Ignore activity logging errors
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Inquiry converted to lead successfully.',
+            'data' => [
+                'inquiry' => new InquiryResource($inquiry),
+                'lead' => new LeadResource($lead->load(['stage', 'source'])),
+            ],
+        ]);
+    }
+
+    /**
+     * Logically delete an inquiry (sets is_delete = 1).
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $inquiry = Inquiry::findOrFail($id);
+        $inquiry->logicalDelete();
+
+        try {
+            ActivityLogger::log(
+                'Website Inquiry Deleted',
+                "Deleted website inquiry #{$inquiry->id} from {$inquiry->first_name} {$inquiry->last_name}",
+                $inquiry
+            );
+        } catch (\Throwable) {
+            // Ignore activity logging errors
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Inquiry deleted successfully.',
         ]);
     }
 }
