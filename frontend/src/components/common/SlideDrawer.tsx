@@ -108,6 +108,18 @@ export default function SlideDrawer({
 
   if (!mounted) return null
 
+  const presetWidths: Record<string, string> = {
+    sm: '480px',
+    md: '560px',
+    lg: '640px',
+    xl: '760px',
+  }
+
+  const resolvedWidth =
+    typeof width === 'number'
+      ? `${width}px`
+      : presetWidths[String(width)] || width || '640px'
+
   const drawerContent = (
     <div
       className={`slide-drawer-overlay slide-drawer-placement-${placement} ${
@@ -125,7 +137,7 @@ export default function SlideDrawer({
       <div
         className={`slide-drawer-container ${className}`}
         style={{
-          width: typeof width === 'number' ? `${width}px` : width,
+          width: resolvedWidth,
         }}
         onClick={(e) => e.stopPropagation()}
       >

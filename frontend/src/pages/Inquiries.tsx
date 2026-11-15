@@ -11,13 +11,18 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  UserPlus,
+  Trash2,
+  CheckCircle,
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import StatCard from '@/components/common/StatCard'
 import Breadcrumb from '@/components/ui/Breadcrumb'
 import DataTable, { getPageNumbers, type Column } from '@/components/common/DataTable'
 import ActionDropdown from '@/components/common/ActionDropdown'
+import ConfirmationModal from '@/components/common/ConfirmationModal'
 import InquiryViewDrawer from '@/components/inquiries/InquiryViewDrawer'
+import { capitalizeWords } from '@/lib/utils'
 import {
   inquiriesApi,
   type Inquiry,
@@ -57,6 +62,17 @@ export default function Inquiries() {
   const [viewingInquiry, setViewingInquiry] = useState<Inquiry | null>(null)
   const [isViewOpen, setIsViewOpen] = useState(false)
 
+  // Universal Confirmation Modal states for Convert to Lead and Delete
+  const [inquiryToConvert, setInquiryToConvert] = useState<Inquiry | null>(null)
+  const [inquiryToDelete, setInquiryToDelete] = useState<Inquiry | null>(null)
+
+  // Toast notification
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const showToast = (msg: string) => {
+    setToastMessage(msg)
+    setTimeout(() => setToastMessage(null), 3500)
+  }
+
   // Debounce search input
   useEffect(() => {
     if (searchQuery === debouncedSearch) return
@@ -67,7 +83,7 @@ export default function Inquiries() {
     return () => clearTimeout(timer)
   }, [searchQuery, debouncedSearch])
 
-  // Fetch Inquiries from GET /api/v1/inquiries
+  // Fetch Inquiries from GET /api/v1/inquiries (only status = 1 and is_delete = 0)
   const fetchInquiriesList = useCallback(async () => {
     setLoading(true)
     try {
@@ -136,6 +152,48 @@ export default function Inquiries() {
     setIsViewOpen(true)
   }
 
+  const getDisplayName = (inquiry: Inquiry) => {
+    const f = inquiry.first_name || inquiry.firstname || ''
+    const l = inquiry.last_name || inquiry.lastname || ''
+    return capitalizeWords(`${f} ${l}`.trim()) || `Inquiry #${inquiry.id}`
+  }
+
+  // Confirm Convert to Lead
+  const handleConfirmConvertToLead = async () => {
+    if (!inquiryToConvert) return
+    const target = inquiryToConvert
+    const displayName = getDisplayName(target)
+    try {
+      await inquiriesApi.convertToLead(target.id)
+      showToast(`Inquiry from "${displayName}" converted to Lead successfully`)
+      if (viewingInquiry && viewingInquiry.id === target.id) {
+        setIsViewOpen(false)
+      }
+      setInquiryToConvert(null)
+      fetchInquiriesList()
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to convert inquiry to lead')
+    }
+  }
+
+  // Confirm Delete Inquiry
+  const handleConfirmDelete = async () => {
+    if (!inquiryToDelete) return
+    const target = inquiryToDelete
+    const displayName = getDisplayName(target)
+    try {
+      await inquiriesApi.deleteInquiry(target.id)
+      showToast(`Inquiry from "${displayName}" deleted successfully`)
+      if (viewingInquiry && viewingInquiry.id === target.id) {
+        setIsViewOpen(false)
+      }
+      setInquiryToDelete(null)
+      fetchInquiriesList()
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to delete inquiry')
+    }
+  }
+
   const getInitials = (inquiry: Inquiry) => {
     const f = (inquiry.first_name || inquiry.firstname || '').charAt(0)
     const l = (inquiry.last_name || inquiry.lastname || '').charAt(0)
@@ -188,7 +246,7 @@ export default function Inquiries() {
       key: 'last_name',
       header: 'LAST NAME',
       render: (inquiry) => (
-        <span className="font-semibold text-slate-800 text-sm">
+        <span className="font-semibold text-slate-800 text-sm whitespace-nowrap">
           {inquiry.last_name || inquiry.lastname || '—'}
         </span>
       ),
@@ -200,7 +258,7 @@ export default function Inquiries() {
         inquiry.email ? (
           <a
             href={`mailto:${inquiry.email}`}
-            className="text-slate-600 hover:text-blue-600 text-sm hover:underline"
+            className="text-slate-600 hover:text-blue-600 text-sm hover:underline whitespace-nowrap"
             onClick={(e) => e.stopPropagation()}
           >
             {inquiry.email}
@@ -216,7 +274,7 @@ export default function Inquiries() {
         inquiry.contact_number ? (
           <a
             href={`tel:${inquiry.contact_number}`}
-            className="text-slate-600 hover:text-blue-600 text-sm font-medium hover:underline"
+            className="text-slate-600 hover:text-blue-600 text-sm font-medium hover:underline whitespace-nowrap"
             onClick={(e) => e.stopPropagation()}
           >
             {inquiry.contact_number}
@@ -256,13 +314,32 @@ export default function Inquiries() {
       align: 'center',
       render: (inquiry) => (
         <ActionDropdown
-          minWidth={160}
+          minWidth={185}
           items={[
             {
               key: 'view',
-              label: 'View Inquiry',
+              label: 'View Details',
               icon: <Eye size={14} />,
               onClick: () => handleOpenView(inquiry),
+            },
+            {
+              key: 'convert',
+              label: 'Convert to Lead',
+              icon: <UserPlus size={14} />,
+              success: true,
+              onClick: () => setInquiryToConvert(inquiry),
+            },
+            {
+              key: 'divider',
+              label: '',
+              divider: true,
+            },
+            {
+              key: 'delete',
+              label: 'Delete Inquiry',
+              icon: <Trash2 size={14} />,
+              danger: true,
+              onClick: () => setInquiryToDelete(inquiry),
             },
           ]}
         />
@@ -272,6 +349,14 @@ export default function Inquiries() {
 
   return (
     <div className="contacts-module-container animate-fade-in">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="module-toast animate-slide-up">
+          <CheckCircle size={16} className="text-success-500" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <Breadcrumb items={[{ label: 'Website' }, { label: 'Inquiry' }]} />
 
@@ -279,7 +364,7 @@ export default function Inquiries() {
       <PageHeader
         icon={<Globe size={24} />}
         title="Website Inquiries"
-        description="View customer inquiries received from your company website. Click any inquiry row to inspect full details and messages."
+        description="View customer inquiries received from your company website. Click any inquiry row to inspect full details, convert to a lead, or archive."
       />
 
       {/* Stat Cards Summary Row */}
@@ -519,8 +604,35 @@ export default function Inquiries() {
         inquiry={viewingInquiry}
         isOpen={isViewOpen}
         onClose={() => setIsViewOpen(false)}
+        onConvertToLead={(inq) => setInquiryToConvert(inq)}
+        onDelete={(inq) => setInquiryToDelete(inq)}
+      />
+
+      {/* Universal Confirmation Modal: Convert to Lead */}
+      <ConfirmationModal
+        isOpen={Boolean(inquiryToConvert)}
+        onClose={() => setInquiryToConvert(null)}
+        onConfirm={handleConfirmConvertToLead}
+        variant="primary"
+        title="Convert Inquiry to Lead"
+        itemName={inquiryToConvert ? getDisplayName(inquiryToConvert) : undefined}
+        message="Are you sure you want to convert this inquiry into a Lead? A new lead record will be created with these inquiry details, and this inquiry will be removed from the Inquiry list."
+        confirmText="Convert to Lead"
+        cancelText="Cancel"
+      />
+
+      {/* Universal Confirmation Modal: Delete Inquiry */}
+      <ConfirmationModal
+        isOpen={Boolean(inquiryToDelete)}
+        onClose={() => setInquiryToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        variant="danger"
+        title="Delete Inquiry"
+        itemName={inquiryToDelete ? getDisplayName(inquiryToDelete) : undefined}
+        message="Are you sure you want to delete this inquiry? This record will be archived and removed from the Inquiry list."
+        confirmText="Delete Inquiry"
+        cancelText="Cancel"
       />
     </div>
   )
 }
-

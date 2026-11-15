@@ -45,7 +45,11 @@ async function request<T = any>(
     ? cleanEndpoint
     : `${API_BASE_URL.replace(/\/$/, '')}${cleanEndpoint}`
 
-  const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
+  const token =
+    localStorage.getItem('token') ||
+    localStorage.getItem('auth_token') ||
+    sessionStorage.getItem('auth_token') ||
+    sessionStorage.getItem('token')
 
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData
 

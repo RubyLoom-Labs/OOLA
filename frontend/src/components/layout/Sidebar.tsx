@@ -41,6 +41,7 @@ const navItems: NavItem[] = [
     path: '/website',
     children: [
       { label: 'Inquiry', path: '/website/inquiry' },
+      { label: 'Comments', path: '/website/comments' },
     ],
   },
   { label: 'Leads', icon: Users, path: '/leads' },

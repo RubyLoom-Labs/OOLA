@@ -15,6 +15,7 @@ import CreateQuotation from '@/pages/quotes/CreateQuotation'
 import Projects from '@/pages/Projects'
 import ProjectWorkspace from '@/pages/ProjectWorkspace'
 import Inquiries from '@/pages/Inquiries'
+import Comments from '@/pages/Comments'
 import PlaceholderPage from '@/pages/PlaceholderPage'
 
 function App() {
@@ -38,6 +39,10 @@ function App() {
               <Route path="/website/inquery" element={<Inquiries />} />
               <Route path="/inquiries" element={<Inquiries />} />
               <Route path="/inquery" element={<Inquiries />} />
+              <Route path="/website/comments" element={<Comments />} />
+              <Route path="/website/comment" element={<Comments />} />
+              <Route path="/comments" element={<Comments />} />
+              <Route path="/comment" element={<Comments />} />
               <Route path="/leads" element={<Leads />} />
               <Route path="/companies" element={<Companies />} />
               <Route path="/customers" element={<Navigate to="/companies" replace />} />

@@ -259,6 +259,10 @@ export const companiesApi = {
     }
   },
 
+  async getCompaniesLookup(params?: CompanyLookupParams): Promise<ApiResponse<CompanyLookupItem[]>> {
+    return this.getLookup(params)
+  },
+
   /**
    * GET /api/v1/companies
    * Paginated list of companies with search, status and pagination support

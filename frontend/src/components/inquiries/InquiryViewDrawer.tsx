@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
+  MoreHorizontal,
   Mail,
   Phone,
   User,
@@ -10,6 +11,8 @@ import {
   Copy,
   Check,
   Hash,
+  UserPlus,
+  Trash2,
 } from 'lucide-react'
 import { inquiriesApi, type Inquiry } from '@/apis/inquiriesApi'
 import SlideDrawer from '@/components/common/SlideDrawer'
@@ -19,6 +22,8 @@ interface InquiryViewDrawerProps {
   inquiry: Inquiry | null
   isOpen: boolean
   onClose: () => void
+  onConvertToLead?: (inquiry: Inquiry) => void
+  onDelete?: (inquiry: Inquiry) => void
 }
 
 type TabType = 'overview' | 'message'
@@ -27,19 +32,24 @@ export default function InquiryViewDrawer({
   inquiry,
   isOpen,
   onClose,
+  onConvertToLead,
+  onDelete,
 }: InquiryViewDrawerProps) {
   const [localInquiry, setLocalInquiry] = useState<Inquiry | null>(inquiry)
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [copiedMessage, setCopiedMessage] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
 
   useEffect(() => {
     if (inquiry && isOpen) {
       setLocalInquiry(inquiry)
       setActiveTab('overview')
+      setShowMoreMenu(false)
       fetchFullInquiry(inquiry.id)
     } else {
       setActiveTab('overview')
+      setShowMoreMenu(false)
     }
   }, [inquiry?.id, isOpen])
 
@@ -110,7 +120,7 @@ export default function InquiryViewDrawer({
                 <Loader2 size={13} className="animate-spin text-primary-500" />
               )}
               <span className="contact-status-pill status-active">
-                Website Inquiry
+                Active Inquiry
               </span>
             </div>
 
@@ -151,8 +161,19 @@ export default function InquiryViewDrawer({
           </button>
         </div>
 
-        {/* ── QUICK ACTION BUTTONS ROW (VIEW ONLY - NO EDIT / ADD) ── */}
+        {/* ── QUICK ACTION BUTTONS ROW (NO EDIT / ADD) ── */}
         <div className="cvd-actions-row">
+          {onConvertToLead && (
+            <button
+              type="button"
+              className="cvd-btn-primary inline-flex items-center gap-1.5"
+              onClick={() => onConvertToLead(localInquiry)}
+            >
+              <UserPlus size={13} />
+              <span>Convert to Lead</span>
+            </button>
+          )}
+
           {localInquiry.email && (
             <a
               href={`mailto:${localInquiry.email}${
@@ -160,10 +181,10 @@ export default function InquiryViewDrawer({
                   ? `?subject=${encodeURIComponent(`Re: ${localInquiry.subject}`)}`
                   : ''
               }`}
-              className="cvd-btn-primary inline-flex items-center gap-1.5"
+              className="cvd-btn-outline inline-flex items-center gap-1.5"
             >
               <Mail size={13} />
-              <span>Reply via Email</span>
+              <span>Email</span>
             </a>
           )}
 
@@ -173,8 +194,45 @@ export default function InquiryViewDrawer({
               className="cvd-btn-outline inline-flex items-center gap-1.5"
             >
               <Phone size={13} />
-              <span>Call Contact</span>
+              <span>Call</span>
             </a>
+          )}
+
+          {onDelete && (
+            <div style={{ position: 'relative', marginLeft: 'auto' }}>
+              <button
+                type="button"
+                className="cvd-btn-outline"
+                onClick={() => setShowMoreMenu(!showMoreMenu)}
+              >
+                <MoreHorizontal size={13} />
+                <span>More</span>
+              </button>
+              {showMoreMenu && (
+                <div
+                  className="dropdown-menu animate-fade-in"
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: '100%',
+                    marginTop: 4,
+                    zIndex: 50,
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="dropdown-item text-danger"
+                    onClick={() => {
+                      setShowMoreMenu(false)
+                      onDelete(localInquiry)
+                    }}
+                  >
+                    <Trash2 size={13} />
+                    <span>Delete Inquiry</span>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -417,4 +475,3 @@ export default function InquiryViewDrawer({
     </SlideDrawer>
   )
 }
-

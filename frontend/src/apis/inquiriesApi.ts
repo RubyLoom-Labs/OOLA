@@ -16,7 +16,8 @@ export interface Inquiry {
   contact_number: string
   subject?: string | null
   message?: string | null
-  status?: boolean | string
+  status?: boolean | number | string
+  is_delete?: boolean | number
   created_at?: string
   updated_at?: string
 }
@@ -74,7 +75,7 @@ export function normalizeInquiry(item: any): Inquiry {
 export const inquiriesApi = {
   /**
    * GET /api/v1/inquiries
-   * Paginated list of website inquiries with search and sorting support
+   * Paginated list of active website inquiries (status = 1 and is_delete = 0)
    */
   async getInquiries(params?: InquiryQueryParams): Promise<ApiResponse<Inquiry[]>> {
     const query: Record<string, any> = {}
@@ -123,7 +124,22 @@ export const inquiriesApi = {
     }
     return res
   },
+
+  /**
+   * POST /api/v1/inquiries/{id}/convert-to-lead
+   * Convert an inquiry into a Lead record and set inquiry status = 0
+   */
+  async convertToLead(id: number | string): Promise<ApiResponse<any>> {
+    return await apiClient.post<ApiResponse<any>>(`/inquiries/${id}/convert-to-lead`)
+  },
+
+  /**
+   * DELETE /api/v1/inquiries/{id}
+   * Logically delete an inquiry (sets is_delete = 1)
+   */
+  async deleteInquiry(id: number | string): Promise<ApiResponse<{ message: string }>> {
+    return await apiClient.delete<ApiResponse<{ message: string }>>(`/inquiries/${id}`)
+  },
 }
 
 export default inquiriesApi
-
